@@ -16,7 +16,7 @@ static const char* TAG = "stzx";
 //i2s number
 #define STZX_I2S_NUM           (1)
 //i2s sample rate
-// need at least two sample points in one 256/6.5=39.4 us line, so less than 19us, for expmple 16.67us 
+// 
 #define STZX_I2S_SAMPLE_RATE   (4000) // times 32 is 8us/bit = 64us/byte
 #define USEC_TO_BYTE_SAMPLES(us)   (us*STZX_I2S_SAMPLE_RATE*4/1000000) 
 #define MILLISEC_TO_BYTE_SAMPLES(ms)   (ms*STZX_I2S_SAMPLE_RATE*4/1000) 
