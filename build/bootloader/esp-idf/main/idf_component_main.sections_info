@@ -1,0 +1,50 @@
+In archive C:/Users/Surfacebook/Documents/Inter/esp/zx_iot/build/bootloader/esp-idf/main/libmain.a:
+
+bootloader_start.c.obj:     file format elf32-xtensa-le
+
+Sections:
+Idx Name          Size      VMA       LMA       File off  Algn
+  0 .literal.selected_boot_partition 00000004  00000000  00000000  00000034  2**2
+                  CONTENTS, ALLOC, LOAD, RELOC, READONLY, CODE
+  1 .literal.select_partition_number 00000018  00000000  00000000  00000038  2**2
+                  CONTENTS, ALLOC, LOAD, RELOC, READONLY, CODE
+  2 .literal.call_start_cpu0 00000018  00000000  00000000  00000050  2**2
+                  CONTENTS, ALLOC, LOAD, RELOC, READONLY, CODE
+  3 .text         00000000  00000000  00000000  00000068  2**0
+                  CONTENTS, ALLOC, LOAD, READONLY, CODE
+  4 .data         00000000  00000000  00000000  00000068  2**0
+                  CONTENTS, ALLOC, LOAD, DATA
+  5 .bss          00000000  00000000  00000000  00000068  2**0
+                  ALLOC
+  6 .text.selected_boot_partition 00000010  00000000  00000000  00000068  2**2
+                  CONTENTS, ALLOC, LOAD, RELOC, READONLY, CODE
+  7 .rodata.str1.4 0000003b  00000000  00000000  00000078  2**2
+                  CONTENTS, ALLOC, LOAD, READONLY, DATA
+  8 .text.select_partition_number 00000034  00000000  00000000  000000b4  2**2
+                  CONTENTS, ALLOC, LOAD, RELOC, READONLY, CODE
+  9 .text.call_start_cpu0 0000003c  00000000  00000000  000000e8  2**2
+                  CONTENTS, ALLOC, LOAD, RELOC, READONLY, CODE
+ 10 .debug_frame  00000058  00000000  00000000  00000124  2**2
+                  CONTENTS, RELOC, READONLY, DEBUGGING
+ 11 .debug_info   00000337  00000000  00000000  0000017c  2**0
+                  CONTENTS, RELOC, READONLY, DEBUGGING
+ 12 .debug_abbrev 0000015a  00000000  00000000  000004b3  2**0
+                  CONTENTS, READONLY, DEBUGGING
+ 13 .debug_loc    00000084  00000000  00000000  0000060d  2**0
+                  CONTENTS, RELOC, READONLY, DEBUGGING
+ 14 .debug_aranges 00000030  00000000  00000000  00000691  2**0
+                  CONTENTS, RELOC, READONLY, DEBUGGING
+ 15 .debug_ranges 00000020  00000000  00000000  000006c1  2**0
+                  CONTENTS, RELOC, READONLY, DEBUGGING
+ 16 .debug_line   000003b3  00000000  00000000  000006e1  2**0
+                  CONTENTS, RELOC, READONLY, DEBUGGING
+ 17 .debug_str    0000037b  00000000  00000000  00000a94  2**0
+                  CONTENTS, READONLY, DEBUGGING
+ 18 .comment      0000003c  00000000  00000000  00000e0f  2**0
+                  CONTENTS, READONLY
+ 19 .xtensa.info  00000038  00000000  00000000  00000e4b  2**0
+                  CONTENTS, READONLY
+ 20 .xt.lit       00000018  00000000  00000000  00000e83  2**0
+                  CONTENTS, RELOC, READONLY
+ 21 .xt.prop      000000b4  00000000  00000000  00000e9b  2**0
+                  CONTENTS, RELOC, READONLY

@@ -1,0 +1,18 @@
+{
+    "project_name":       "bootloader",
+    "project_path":       "C:/Users/Surfacebook/Desktop/esp-idf/components/bootloader/subproject",
+    "build_dir":          "C:/Users/Surfacebook/Documents/Inter/esp/zx_iot/build/bootloader",
+    "config_file":        "C:/Users/Surfacebook/Documents/Inter/esp/zx_iot/sdkconfig",
+    "config_defaults":    "",
+    "app_elf":            "bootloader.elf",
+    "app_bin":            "bootloader.bin",
+    "git_revision":       "v3.3",
+    "phy_data_partition": "",
+    "monitor_baud" : "115200",
+    "config_environment" : {
+        "COMPONENT_KCONFIGS" : " C:/Users/Surfacebook/Desktop/esp-idf/components/efuse/Kconfig C:/Users/Surfacebook/Desktop/esp-idf/components/esp32/Kconfig C:/Users/Surfacebook/Desktop/esp-idf/components/log/Kconfig C:/Users/Surfacebook/Desktop/esp-idf/components/spi_flash/Kconfig",
+        "COMPONENT_KCONFIGS_PROJBUILD" : " C:/Users/Surfacebook/Desktop/esp-idf/components/bootloader/Kconfig.projbuild C:/Users/Surfacebook/Desktop/esp-idf/components/esptool_py/Kconfig.projbuild C:/Users/Surfacebook/Desktop/esp-idf/components/partition_table/Kconfig.projbuild"
+    },
+    "build_components" : [ "soc", "esp32", "log", "bootloader", "spi_flash", "micro-ecc", "efuse", "bootloader_support", "main", "esptool_py", "partition_table" ],
+    "build_component_paths" : [ "C:/Users/Surfacebook/Desktop/esp-idf/components/soc", "C:/Users/Surfacebook/Desktop/esp-idf/components/esp32", "C:/Users/Surfacebook/Desktop/esp-idf/components/log", "C:/Users/Surfacebook/Desktop/esp-idf/components/bootloader", "C:/Users/Surfacebook/Desktop/esp-idf/components/spi_flash", "C:/Users/Surfacebook/Desktop/esp-idf/components/micro-ecc", "C:/Users/Surfacebook/Desktop/esp-idf/components/efuse", "C:/Users/Surfacebook/Desktop/esp-idf/components/bootloader_support", "C:/Users/Surfacebook/Desktop/esp-idf/components/bootloader/subproject/main", "C:/Users/Surfacebook/Desktop/esp-idf/components/esptool_py", "C:/Users/Surfacebook/Desktop/esp-idf/components/partition_table" ]
+}

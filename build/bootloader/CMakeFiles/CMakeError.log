@@ -1,0 +1,30 @@
+Compiling the C compiler identification source file "CMakeCCompilerId.c" failed.
+Compiler: C:/Users/Surfacebook/.espressif/tools/xtensa-esp32-elf/1.22.0-80-g6c4433a5-5.2.0/xtensa-esp32-elf/bin/xtensa-esp32-elf-gcc.exe 
+Build flags: -mlongcalls
+Id flags:  
+
+The output was:
+1
+c:/users/surfacebook/.espressif/tools/xtensa-esp32-elf/1.22.0-80-g6c4433a5-5.2.0/xtensa-esp32-elf/bin/../lib/gcc/xtensa-esp32-elf/5.2.0/../../../../xtensa-esp32-elf/bin/ld.exe: cannot find crt1-sim.o: No such file or directory
+c:/users/surfacebook/.espressif/tools/xtensa-esp32-elf/1.22.0-80-g6c4433a5-5.2.0/xtensa-esp32-elf/bin/../lib/gcc/xtensa-esp32-elf/5.2.0/../../../../xtensa-esp32-elf/bin/ld.exe: cannot find _vectors.o: No such file or directory
+c:/users/surfacebook/.espressif/tools/xtensa-esp32-elf/1.22.0-80-g6c4433a5-5.2.0/xtensa-esp32-elf/bin/../lib/gcc/xtensa-esp32-elf/5.2.0/../../../../xtensa-esp32-elf/bin/ld.exe: cannot find -lsim
+c:/users/surfacebook/.espressif/tools/xtensa-esp32-elf/1.22.0-80-g6c4433a5-5.2.0/xtensa-esp32-elf/bin/../lib/gcc/xtensa-esp32-elf/5.2.0/../../../../xtensa-esp32-elf/bin/ld.exe: cannot find -lhandlers-sim
+c:/users/surfacebook/.espressif/tools/xtensa-esp32-elf/1.22.0-80-g6c4433a5-5.2.0/xtensa-esp32-elf/bin/../lib/gcc/xtensa-esp32-elf/5.2.0/../../../../xtensa-esp32-elf/bin/ld.exe: cannot find -lhal
+collect2.exe: error: ld returned 1 exit status
+
+
+Compiling the CXX compiler identification source file "CMakeCXXCompilerId.cpp" failed.
+Compiler: C:/Users/Surfacebook/.espressif/tools/xtensa-esp32-elf/1.22.0-80-g6c4433a5-5.2.0/xtensa-esp32-elf/bin/xtensa-esp32-elf-g++.exe 
+Build flags: -mlongcalls
+Id flags:  
+
+The output was:
+1
+c:/users/surfacebook/.espressif/tools/xtensa-esp32-elf/1.22.0-80-g6c4433a5-5.2.0/xtensa-esp32-elf/bin/../lib/gcc/xtensa-esp32-elf/5.2.0/../../../../xtensa-esp32-elf/bin/ld.exe: cannot find crt1-sim.o: No such file or directory
+c:/users/surfacebook/.espressif/tools/xtensa-esp32-elf/1.22.0-80-g6c4433a5-5.2.0/xtensa-esp32-elf/bin/../lib/gcc/xtensa-esp32-elf/5.2.0/../../../../xtensa-esp32-elf/bin/ld.exe: cannot find _vectors.o: No such file or directory
+c:/users/surfacebook/.espressif/tools/xtensa-esp32-elf/1.22.0-80-g6c4433a5-5.2.0/xtensa-esp32-elf/bin/../lib/gcc/xtensa-esp32-elf/5.2.0/../../../../xtensa-esp32-elf/bin/ld.exe: cannot find -lsim
+c:/users/surfacebook/.espressif/tools/xtensa-esp32-elf/1.22.0-80-g6c4433a5-5.2.0/xtensa-esp32-elf/bin/../lib/gcc/xtensa-esp32-elf/5.2.0/../../../../xtensa-esp32-elf/bin/ld.exe: cannot find -lhandlers-sim
+c:/users/surfacebook/.espressif/tools/xtensa-esp32-elf/1.22.0-80-g6c4433a5-5.2.0/xtensa-esp32-elf/bin/../lib/gcc/xtensa-esp32-elf/5.2.0/../../../../xtensa-esp32-elf/bin/ld.exe: cannot find -lhal
+collect2.exe: error: ld returned 1 exit status
+
+

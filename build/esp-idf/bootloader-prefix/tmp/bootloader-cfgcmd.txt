@@ -1,0 +1,1 @@
+cmd='C:/Users/Surfacebook/.espressif/tools/cmake/3.13.4/bin/cmake.exe;-DSDKCONFIG=C:/Users/Surfacebook/Documents/Inter/esp/zx_iot/sdkconfig;-DIDF_PATH=C:/Users/Surfacebook/Desktop/esp-idf;-DSECURE_BOOT_SIGNING_KEY=C:/Users/Surfacebook/Documents/Inter/esp/zx_iot;-DEXTRA_COMPONENT_DIRS=C:/Users/Surfacebook/Desktop/esp-idf/components/bootloader;-GNinja;<SOURCE_DIR><SOURCE_SUBDIR>'
