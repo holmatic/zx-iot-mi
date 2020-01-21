@@ -1,0 +1,41 @@
+// holmatic
+
+
+#ifndef _ZX_SERVER_H_
+#define _ZX_SERVER_H_
+#include "esp_err.h"
+#include <esp_types.h>
+#include "esp_attr.h"
+#include "freertos/queue.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+// call once at startup
+void zxsrv_init();
+
+typedef enum {
+
+    ZXSG_INIT       = 300,        /*!< initial status */
+    ZXSG_SLOWM_50HZ  ,        /*!< start retriving file */
+    ZXSG_SLOWM_60HZ,                 /*!< during file transfer, check if ZX loads or ignores */
+	ZXSG_SAVE,
+	ZXSG_SILENCE,
+	ZXSG_HIGH ,
+	ZXSG_NOISE
+
+} zxserv_evt_type_t;
+
+typedef struct {
+    zxserv_evt_type_t  evt_type;   /*!< sfzx_evt_type_t */
+    size_t  data;    /*!<   */
+} zxserv_event_t;
+
+void zxsrv_send_msg_to_srv( zxserv_evt_type_t msg, size_t dat);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* _ZX_SERVER_H_ */
