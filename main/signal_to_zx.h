@@ -22,6 +22,9 @@ typedef enum {
 	STZX_FILE_END,      /*!< file end, all data had been retieved, data 0 */
 } stzx_mode_t;
 
+#define ZX_SAVE_TAG_LOADER_RESPONSE 70	// Initial loader responds with this tag and the RAMTOP info
+
+
 void stzx_send_cmd(stzx_mode_t cmd, uint8_t data);
 
 #ifdef __cplusplus

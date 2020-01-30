@@ -171,8 +171,23 @@ line0:
 BASIC_START:
 
 	CALL FAST	; here we go
-	LD HL, 0676H    ; return address in NEXT-LINE like when LOADING
-    
+    ; send msg back
+    CALL $0F46  ; go to fast mode
+    LD B,200  ; 200=160ms
+W1: push BC
+    ld b,0
+W2:
+    djnz W2     ; 4usec * B*B
+    pop BC
+    djnz W1
+    LD E, 70    ; ID for loader reply
+    call $031F  ; SAVE byte in E
+    ld hl, 16389    ; RAMTOP high byte fo host to know memory size
+    call  $031E ; SAVE byte in (HL)   
+    LD HL, 0676H    ; return address in NEXT-LINE like when LOADING
+    LD E, 0    ; send dummy as end
+    call $031F ;
+
     ;PUSH HL
 	EX (SP),HL
 #if 0

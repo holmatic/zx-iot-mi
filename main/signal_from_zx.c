@@ -178,8 +178,8 @@ static void set_det_phase(zxserv_evt_type_t newphase)
 {
 	if(newphase!=phase){
 		phase=newphase;
-		zxsrv_send_msg_to_srv( newphase, 0);
-		printf("Detected %s \n", phasenames[newphase-ZXSG_INIT]  );
+		zxsrv_send_msg_to_srv( newphase, 0,0);
+		ESP_LOGI(TAG,"Detected %s \n", phasenames[newphase-ZXSG_INIT]  );
 	}
 }
 
@@ -210,12 +210,14 @@ static void zxfile_bit(uint8_t bitval)
     if(bitval) zxfile.data |= (0x80>>zxfile.bitcount);
     if(++zxfile.bitcount>=8) {
         // have a byte
-        if(zxfile.bytecount%50==0) ESP_LOGV(TAG,"ZXFile byte %d data %x\n",zxfile.bytecount,zxfile.data );
+        if(zxfile.bytecount%100<=1) ESP_LOGI(TAG,"ZXFile byte %d data %x\n",zxfile.bytecount,zxfile.data );
         if(zxfile.bytecount == zxfile.namelength+16404-16393) zxfile.e_line=zxfile.data;
         if(zxfile.bytecount == zxfile.namelength+16405-16393) {
             zxfile.e_line+=zxfile.data<<8;
             ESP_LOGI(TAG,"File E_LINE %d - len %d+%d\n",zxfile.e_line,zxfile.e_line-16393,zxfile.namelength);
         }
+		zxsrv_send_msg_to_srv( ZXSG_FILE_DATA, zxfile.bytecount, zxfile.data);
+
         zxfile.bitcount=0;
         zxfile.bytecount++;
         // zx memory image is preceided by a name that end with the first inverse char (MSB set)
@@ -236,7 +238,7 @@ static void zxfile_check_bit_end()
         zxfile_bit(1);
     }
     else{
-        printf("File read retrieved %d pulses, cancel\n",zxfile.pulscount);
+        ESP_LOGI(TAG,"File read retrieved %d pulses, cancel\n",zxfile.pulscount);
         zxfile.state=ZXFS_INIT;
     }
     zxfile.pulscount=0;
@@ -306,7 +308,7 @@ static void analyze_0_to_1()
 	}
 
 
-	if(zxfile.state<ZXFS_HDR_RECEIVED && level.duration>MILLISEC_TO_SAMPLES(500))
+	if(zxfile.state<ZXFS_HDR_RECEIVED && level.duration>MILLISEC_TO_SAMPLES(100))
 	{
 		// end of long break, could be header of file
 		memset(&zxfile,0,sizeof(zxfile_rec_status_t));
@@ -346,7 +348,7 @@ static void analyze_data(uint8_t* buf, size_t size)
 		do_some_stat(buf);
 
 	++stat.packets_received;
-	if(stat.packets_received%2000==2 ){
+	if(stat.packets_received%8000==2 ){
 		ESP_LOGV(TAG,"stat.packets_received %d \n",stat.packets_received);
 		ESP_LOGI(TAG,"Min Max Thresh %d %d %d \n", stat.min_v, stat.max_v, stat.thresh_v  );
 		ESP_LOGI(TAG,"Current %d %d %d,  \n", level.current, level.duration,level.dur_since_last_0_lvl  );

@@ -23,7 +23,9 @@ typedef enum {
 	ZXSG_SAVE,
 	ZXSG_SILENCE,
 	ZXSG_HIGH ,
-	ZXSG_NOISE
+	ZXSG_NOISE,
+
+    ZXSG_FILE_DATA = 400,
 
 } zxserv_evt_type_t;
 
@@ -34,10 +36,11 @@ typedef enum {
 
 typedef struct {
     zxserv_evt_type_t  evt_type;   /*!< sfzx_evt_type_t */
-    size_t  data;    /*!<   */
+    uint16_t  addr;    /*!<   */
+    uint16_t  data;    /*!<   */
 } zxserv_event_t;
 
-void zxsrv_send_msg_to_srv( zxserv_evt_type_t msg, size_t dat);
+void zxsrv_send_msg_to_srv( zxserv_evt_type_t msg, uint16_t addr, uint16_t data);
 
 #ifdef __cplusplus
 }
