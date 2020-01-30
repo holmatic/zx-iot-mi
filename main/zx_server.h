@@ -27,6 +27,11 @@ typedef enum {
 
 } zxserv_evt_type_t;
 
+
+#define FILE_NOT_ACTIVE 0
+#define FILE_TAG_NORMAL 101
+#define FILE_TAG_COMPRESSED 202
+
 typedef struct {
     zxserv_evt_type_t  evt_type;   /*!< sfzx_evt_type_t */
     size_t  data;    /*!<   */

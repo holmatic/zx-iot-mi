@@ -16,6 +16,7 @@
 #include "esp_spiffs.h"
 #include "nvs_flash.h"
 
+#include "zx_server.h"
 #include "signal_from_zx.h"
 #include "signal_to_zx.h"
 
@@ -129,15 +130,16 @@ void app_main()
     //QueueHandle_t msgqueue=NULL;
     //msgqueue=xQueueCreate(10,sizeof(sfzx_evt_type_t));
 
+    zxsrv_init();
     stzx_init();
     sfzx_init();
 
-	initialise_wifi();
+//	initialise_wifi();
 
     /* Initialize file storage */
-    ESP_ERROR_CHECK(init_spiffs());
+//    ESP_ERROR_CHECK(init_spiffs());
 
     /* Start the file server */
-    ESP_ERROR_CHECK(start_file_server("/spiffs"));
+//    ESP_ERROR_CHECK(start_file_server("/spiffs"));
 
 }

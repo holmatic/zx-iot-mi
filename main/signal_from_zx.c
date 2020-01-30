@@ -8,6 +8,7 @@
 #include "driver/i2s.h"
 #include "driver/adc.h"
 #include "esp_adc_cal.h"
+#include "zx_server.h"
 #include "signal_from_zx.h"
 
 
@@ -169,15 +170,16 @@ static void do_some_stat(void* samplebuf)
     stat.thresh_v=(stat.max_v+stat.min_v)/2;
 }
 
-static zx_det_phase_t phase=ZXSG_INIT;
+static zxserv_evt_type_t phase=ZXSG_INIT;
 
 static const char* phasenames[]={"INIT","SLOW-50Hz","SLOW-60Hz","SAVE","SILENCE","HIGH","NOISE"};
 
-static void set_det_phase(zx_det_phase_t newphase)
+static void set_det_phase(zxserv_evt_type_t newphase)
 {
 	if(newphase!=phase){
 		phase=newphase;
-		printf("Detected %s \n", phasenames[newphase]  );
+		zxsrv_send_msg_to_srv( newphase, 0);
+		printf("Detected %s \n", phasenames[newphase-ZXSG_INIT]  );
 	}
 }
 
@@ -208,11 +210,11 @@ static void zxfile_bit(uint8_t bitval)
     if(bitval) zxfile.data |= (0x80>>zxfile.bitcount);
     if(++zxfile.bitcount>=8) {
         // have a byte
-        if(zxfile.bytecount%50==1) ESP_LOGV(TAG,"ZXFile byte %d data %x\n",zxfile.bytecount,zxfile.data );
+        if(zxfile.bytecount%50==0) ESP_LOGV(TAG,"ZXFile byte %d data %x\n",zxfile.bytecount,zxfile.data );
         if(zxfile.bytecount == zxfile.namelength+16404-16393) zxfile.e_line=zxfile.data;
         if(zxfile.bytecount == zxfile.namelength+16405-16393) {
             zxfile.e_line+=zxfile.data<<8;
-            ESP_LOGV(TAG,"File E_LINE %d - len %d+%d\n",zxfile.e_line,zxfile.e_line-16393,zxfile.namelength);
+            ESP_LOGI(TAG,"File E_LINE %d - len %d+%d\n",zxfile.e_line,zxfile.e_line-16393,zxfile.namelength);
         }
         zxfile.bitcount=0;
         zxfile.bytecount++;
@@ -267,7 +269,7 @@ static void analyze_0_to_1()
 	if(level.duration>USEC_TO_SAMPLES(300) && level.duration<USEC_TO_SAMPLES(600))
 	{
 		// could be sync
-		if(level.dur_since_last_sync>MILLISEC_TO_SAMPLES(15) && level.dur_since_last_sync>MILLISEC_TO_SAMPLES(22))
+		if(level.dur_since_last_sync>MILLISEC_TO_SAMPLES(15) && level.dur_since_last_sync<MILLISEC_TO_SAMPLES(22))
 		{
 			set_det_phase(ZXSG_SLOWM_50HZ);
 		}
@@ -275,9 +277,9 @@ static void analyze_0_to_1()
 			set_det_phase(ZXSG_NOISE);
 		}
 
-		if(stat.packets_received%100==10){
-			ESP_LOGV(TAG,"Frame detected %d usec (%d) ", samples_to_usec(level.dur_since_last_sync),level.duration  );
-			ESP_LOGV(TAG,"Min Max Thresh %d %d %d \n", stat.min_v, stat.max_v, stat.thresh_v  );
+		if(stat.packets_received%5000==10){
+			ESP_LOGI(TAG,"Frame detected %d usec (%d) ", samples_to_usec(level.dur_since_last_sync),level.duration  );
+			ESP_LOGI(TAG,"Min Max Thresh %d %d %d \n", stat.min_v, stat.max_v, stat.thresh_v  );
 
 		}
 		level.dur_since_last_sync=0;
@@ -291,7 +293,7 @@ static void analyze_0_to_1()
 		}
 		else
 		{
-			ESP_LOGV(TAG,"File gap retrieved of %d usec, cancel with %d bytes\n",samples_to_usec(level.duration),zxfile.bytecount);
+			ESP_LOGI(TAG,"File gap retrieved of %d usec, cancel with %d bytes\n",samples_to_usec(level.duration),zxfile.bytecount);
 			zxfile.state=ZXFS_INIT;
 		}
 	} else {
@@ -397,22 +399,19 @@ static void analyze_data(uint8_t* buf, size_t size)
 static void sfzx_task(void*arg)
 {
     i2s_event_t evt;
-    size_t bytes_read;
-  //  static uint16_t rcnt=0;
- //   static sfzx_mode_t current_mode = SFZX_MODE_LISTEN;
-    printf("sfzx_task START \n");
+	size_t bytes_read;
+    ESP_LOGI(TAG,"sfzx_task START \n");
     while(true){
 		if(pdTRUE ==  xQueueReceive( i2squeue, &evt, 10 / portTICK_RATE_MS ) ) {
 			if(evt.type==I2S_EVENT_RX_DONE){
-				bytes_read=0;
-				i2s_read(SFZX_I2S_NUM, (void*) i2s_read_buff, SFZX_I2S_READ_LEN_BYTES, &bytes_read, 0); // should always succeed with fll length
-				if (bytes_read!=SFZX_I2S_READ_LEN_BYTES){
-					ESP_LOGW(TAG, "len mismatch, %d %d",bytes_read,SFZX_I2S_READ_LEN_BYTES);
-				}
-				analyze_data(i2s_read_buff,SFZX_I2S_READ_LEN_BYTES);
+                bytes_read=0;
+                i2s_read(SFZX_I2S_NUM, (void*) i2s_read_buff, SFZX_I2S_READ_LEN_BYTES, &bytes_read, 0); // should always succeed with fll length
+                if (bytes_read!=SFZX_I2S_READ_LEN_BYTES){
+                    ESP_LOGW(TAG, "len mismatch, %d %d",bytes_read,SFZX_I2S_READ_LEN_BYTES);
+                }
+                analyze_data(i2s_read_buff,SFZX_I2S_READ_LEN_BYTES);
 			}
 			else ESP_LOGW(TAG,"Unexpected evt %d",evt.type);
-
 		}
     }
 }
