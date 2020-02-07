@@ -77,7 +77,7 @@ void stzx_init()
     if(!i2s_writ_buff) printf("calloc of %d failed\n",STZX_I2S_WRITE_LEN_BYTES);
 
 
-    xTaskCreate(stzx_task, "stzx_task", 1024 * 2, NULL, 8, NULL);
+    xTaskCreate(stzx_task, "stzx_task", 1024 * 3, NULL, 8, NULL);
 }
 
 
@@ -225,12 +225,12 @@ void stzx_send_cmd(stzx_mode_t cmd, uint8_t data)
 	    }
 	    ++fsize;
     	evt.size=fsize;
-	    if(fsize==100){
+	    if(fsize==200){
 	    	/* enough bytes in to start off */
 	    	evt.type=STZX_FILE_START;
 	        if( xQueueSendToBack( event_queue, &evt, 10 / portTICK_RATE_MS ) != pdPASS )	 ESP_LOGE(TAG, "File write event d queue blocked");
 	    }
-	    else if( fsize%1000==500){
+	    else if( fsize%1000==600){
 	    	/* provide an update on the buffer level */
 	    	evt.type=STZX_FILE_DATA;
 	        if( xQueueSendToBack( event_queue, &evt, 10 / portTICK_RATE_MS ) != pdPASS )	 ESP_LOGE(TAG, "File write event d queue blocked");
@@ -282,7 +282,7 @@ static void stzx_task(void*arg)
 					if (fill_buf_from_file(i2s_writ_buff,file_data_queue,buffered_file_count,active_file )){
 						buffered_file_count=0;
 						memset(&zxfile,0,sizeof(zxfile));
-						zxfile.remaining_wavsamples=MILLISEC_TO_BYTE_SAMPLES(800); // break btw files
+						zxfile.remaining_wavsamples=MILLISEC_TO_BYTE_SAMPLES(400); // break btw files
 						ESP_LOGW(TAG, "ENDFILE %d",active_file);
 						active_file=FILE_NOT_ACTIVE;
 						file_busy--;

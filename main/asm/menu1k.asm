@@ -173,7 +173,7 @@ BASIC_START:
 	CALL FAST	; here we go
     ; send msg back
     CALL $0F46  ; go to fast mode
-    LD B,200  ; 200=160ms
+    LD B,160  ; 200=160ms
 W1: push BC
     ld b,0
 W2:
@@ -186,6 +186,16 @@ W2:
     call $031F  ; SAVE byte in E
     LD E, 0    ; send dummy as end
     call $031F ;
+    POP HL ; remove ret addr
+    POP HL ; remove ret addr
+    POP HL ; remove ret addr
+    POP HL ; remove ret addr
+
+    POP HL ; remove ret addr
+    POP HL ; remove ret addr
+    POP HL ; remove ret addr ??
+   ; 8 times is too much   POP HL ; remove ret addr
+
     LD HL, 0676H    ; return address in NEXT-LINE like when LOADING
 
     ;PUSH HL
@@ -232,7 +242,7 @@ line50:
  
 dfile: 
    db $76 
-   db c_Z,c_X,0,c_I,c_O,,c_T,
+   db c_Z,c_X,0,0,c_I,c_O,c_T,
    db $76,$76,$76,$76,$76,$76,$76,$76 
    db $76,$76,$76,$76,$76,$76,$76,$76 
    db $76,$76,$76,$76,$76,$76,$76,$76 

@@ -116,7 +116,7 @@ void sfzx_init()
     //esp_adc_cal_characterize(I2S_ADC_UNIT, ADC_ATTEN_DB_11, ADC_WIDTH_BIT_12, V_REF, &sampleadc_characteristics);
     i2s_read_buff=(uint8_t*) calloc(SFZX_I2S_READ_LEN_BYTES, sizeof(uint8_t));
     memset(&stat,0,sizeof(statistic_info_type));
-    xTaskCreate(sfzx_task, "sfzx_task", 1024 * 2, NULL, 8, NULL);
+    xTaskCreate(sfzx_task, "sfzx_task", 1024 * 3, NULL, 8, NULL);
 
 
 }
@@ -336,7 +336,7 @@ static void analyze_for_noise()
 	}
 }
 
-
+//static char debugbuf[250];
 
 static void analyze_data(uint8_t* buf, size_t size)
 {
@@ -352,6 +352,8 @@ static void analyze_data(uint8_t* buf, size_t size)
 		ESP_LOGV(TAG,"stat.packets_received %d \n",stat.packets_received);
 		ESP_LOGI(TAG,"Min Max Thresh %d %d %d \n", stat.min_v, stat.max_v, stat.thresh_v  );
 		ESP_LOGI(TAG,"Current %d %d %d,  \n", level.current, level.duration,level.dur_since_last_0_lvl  );
+//		vTaskList( debugbuf ); // TODO - also disable this in menuconfig if we want to save rsources and remove this
+//		ESP_LOGI(TAG,"\n%s\n", debugbuf);
 	}
 	for(ix=0;ix<SFZX_I2S_READ_LEN_SAMPLES;ix++) {
 		v=get_sample(buf,ix);
