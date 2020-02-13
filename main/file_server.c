@@ -82,6 +82,7 @@ static esp_err_t http_resp_dir_html(httpd_req_t *req, const char *dirpath)
 
     DIR *dir = opendir(dirpath);
     const size_t dirpath_len = strlen(dirpath);
+    ESP_LOGI(TAG, "dirpath (%s) ", dirpath);
 
     /* Retrieve the base path of file storage to construct the full path */
     strlcpy(entrypath, dirpath, sizeof(entrypath));

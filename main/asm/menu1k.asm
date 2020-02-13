@@ -194,16 +194,29 @@ W2:
     POP HL ; remove ret addr
     POP HL ; remove ret addr
     POP HL ; remove ret addr ??
-   ; 8 times is too much   POP HL ; remove ret addr
-
+   ; 7 times pop needed, 8 times is too much   POP HL or just reset
+    /* reset stack pointer */
+	LD HL,(16386) ; ERR_SP
+	LD SP,HL
     LD HL, 0676H    ; return address in NEXT-LINE like when LOADING
-
-    ;PUSH HL
 	EX (SP),HL
+#if 1
+    ; run from calculator area
+    LD HL,PLOADER
+    LD DE,32708
+    LD BC,32
+    LDIR
+
+	LD HL,ELINEHI
+	INC (HL) ; make sure no match during load
+	LD HL,4009h	; start of BASIC area to load
+    jp 32708
+#else
 	LD HL,ELINEHI
 	INC (HL) ; make sure no match during load
 	LD HL,4009h	; start of BASIC area to load
     jp PLOADER
+#endif
    db $76   ;N/L 
 
 line10:
@@ -242,7 +255,7 @@ line50:
  
 dfile: 
    db $76 
-   db c_Z,c_X,0,0,c_I,c_O,c_T,
+   ;db c_Z,c_X,0,0,c_I,c_O,c_T,
    db $76,$76,$76,$76,$76,$76,$76,$76 
    db $76,$76,$76,$76,$76,$76,$76,$76 
    db $76,$76,$76,$76,$76,$76,$76,$76 

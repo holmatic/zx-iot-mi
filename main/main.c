@@ -134,12 +134,12 @@ void app_main()
     stzx_init();
     sfzx_init();
 
-//	initialise_wifi();
+	initialise_wifi();
 
     /* Initialize file storage */
-//    ESP_ERROR_CHECK(init_spiffs());
+    ESP_ERROR_CHECK(init_spiffs());
 
     /* Start the file server */
-//    ESP_ERROR_CHECK(start_file_server("/spiffs"));
+    ESP_ERROR_CHECK(start_file_server("/spiffs"));
 
 }

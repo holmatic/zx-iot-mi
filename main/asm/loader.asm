@@ -184,54 +184,35 @@ W2:
     call $031F  ; SAVE byte in E
     ld hl, 16389    ; RAMTOP high byte fo host to know memory size
     call  $031E ; SAVE byte in (HL)   
-    LD HL, 0676H    ; return address in NEXT-LINE like when LOADING
     LD E, 0    ; send dummy as end
     call $031F ;
 
-    ;PUSH HL
+    POP HL ; remove ret addr
+    POP HL ; remove ret addr
+    POP HL ; remove ret addr
+
+    /* reset stack pointer */
+	LD HL,(16386) ; ERR_SP
+	LD SP,HL
+
+    LD HL, 0676H    ; return address in NEXT-LINE like when LOADING
 	EX (SP),HL
 #if 0
-    LD HL,wt_start
-    LD DE,PLOADER
+    ; run from calculator area
+    LD HL,PLOADER
+    LD DE,membot
     LD BC,32
     LDIR
-#endif
+
+	;LD HL,ELINEHI
+	;INC (HL) ; make sure no match during load
+	LD HL,4009h	; start of BASIC area to load
+    jp membot
+#else
 	LD HL,ELINEHI
 	INC (HL) ; make sure no match during load
 	LD HL,4009h	; start of BASIC area to load
     jp PLOADER
-#if 0
-
-wt_start:
-    ld c,$fe   ; 7
-    ld b,8  ; 7    for gap between start and bits
-
-wt_stdly:                  ; 25 cycles=7.7us
-    in a,($FE)  ; 11
-    rla         ; 4
-    jr nc,wt_stdly ; 12 / 7  (D7=0 is low level, wait for high)
-    ; trigger is seen 4us too late in average, so wait 48-4 - 4 us now: 130 cy in-in
-gapdly:
-    djnz gapdly     ; 13*n-5 = 99 for 8
-    ld b,8  ; 7
-bloop:                 ;  need 104 for 32us
-    in d,(c)    ; 12
-    rl d        ; 8
-    rla         ; 4 (rr a is 8)
-    ld d,4      ; 7
-bdly:
-    dec d          ; 4          b*16-5 = 59
-    jr nz,bdly     ; 12 / 7
-    djnz bloop     ; 13 / 8
-    
-    ;LD C,A
-    ;LD B,0
-    ;RET    
-    
-    ld (hl),a   ; 7
-
-	CALL UPDATE  ; will use DE, inc HL    77 clks
-    jr wt_start     ; 12
 #endif
    db $76   ;N/L 
 

@@ -155,7 +155,7 @@ static void do_some_stat(void* samplebuf)
     uint16_t v;
 
     // allow some recovery from spikes, but not too fast
-    if ((stat.packets_received&0x0007)==5){ // see if we feel lucky, this should result in 1digit recovery per 8 packets for noisy data
+    if ((stat.packets_received&0x0003)==2){ // see if we feel lucky, this should result in 1digit recovery per 8 packets for noisy data
         --stat.max_v;
         ++stat.min_v;
     }

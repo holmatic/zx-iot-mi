@@ -188,6 +188,8 @@ static bool fill_buf_from_file(uint8_t* samplebuf, QueueHandle_t dataq, size_t b
 
 static uint8_t file_busy=0;
 
+#define SEND_HOLDOFF_BYTES 200  // enough so we do not run out of data on first chunk even when compressed
+
 void stzx_send_cmd(stzx_mode_t cmd, uint8_t data)
 {
     i2s_event_t evt;
@@ -225,7 +227,7 @@ void stzx_send_cmd(stzx_mode_t cmd, uint8_t data)
 	    }
 	    ++fsize;
     	evt.size=fsize;
-	    if(fsize==200){
+	    if(fsize==SEND_HOLDOFF_BYTES){
 	    	/* enough bytes in to start off */
 	    	evt.type=STZX_FILE_START;
 	        if( xQueueSendToBack( event_queue, &evt, 10 / portTICK_RATE_MS ) != pdPASS )	 ESP_LOGE(TAG, "File write event d queue blocked");
@@ -242,7 +244,7 @@ void stzx_send_cmd(stzx_mode_t cmd, uint8_t data)
 			ESP_LOGE(TAG, "File not open on data write");
 
 		evt.size=fsize;
-		if(fsize<100){
+		if(fsize<SEND_HOLDOFF_BYTES){
 			evt.type=STZX_FILE_START;
 		    if( xQueueSendToBack( event_queue, &evt, 10 / portTICK_RATE_MS ) != pdPASS )	 ESP_LOGE(TAG, "File write event e queue blocked");
 		}

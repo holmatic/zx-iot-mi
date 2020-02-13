@@ -25,7 +25,8 @@ typedef enum {
 void zxfimg_create(zxfimg_prog_t prog_type);
 void zxfimg_print_video(uint8_t linenum, const char* asciitxt);
 
-uint8_t *zxfimg_get_img();
+void zxfimg_set_img(uint16_t filepos,uint8_t data);
+uint8_t zxfimg_get_img(uint16_t filepos);
 uint16_t zxfimg_get_size();
 
 void zxfimg_delete();
