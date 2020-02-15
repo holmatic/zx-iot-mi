@@ -155,10 +155,10 @@ static void do_some_stat(void* samplebuf)
     uint16_t v;
 
     // allow some recovery from spikes, but not too fast
-    if ((stat.packets_received&0x0003)==2){ // see if we feel lucky, this should result in 1digit recovery per 8 packets for noisy data
-        --stat.max_v;
-        ++stat.min_v;
+    if ((stat.packets_received&0x0003)==2){ 
+        stat.max_v--;
     }
+    stat.min_v++; // adapt lower limit faster as there will always be hsyncs around
 
     // pick a subset of points to do some statistics quickly
     for(ix=SFZX_I2S_READ_LEN_SAMPLES/8; ix<SFZX_I2S_READ_LEN_SAMPLES/4;ix++)

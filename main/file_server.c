@@ -13,6 +13,8 @@
 #include <sys/unistd.h>
 #include <sys/stat.h>
 #include <dirent.h>
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 
 #include "esp_err.h"
 #include "esp_log.h"
@@ -95,8 +97,12 @@ static esp_err_t http_resp_dir_html(httpd_req_t *req, const char *dirpath)
     }
 
     /* Send HTML file header */
-    httpd_resp_sendstr_chunk(req, "<!DOCTYPE html><html><body>");
-
+   // httpd_resp_sendstr_chunk(req, "<!DOCTYPE html><html><body style=\"font-family:sans-serif;background-color:black;color:#4f8\">");
+    
+    httpd_resp_sendstr_chunk(req, "<!DOCTYPE html><html> <style> body {font-family:sans-serif;background-color:#222;color:#4f8;} ");
+    httpd_resp_sendstr_chunk(req, "a:link {color:#4f8;} a:visited  {color:#4f8;} a:hover {color:#eee;} table { border-collapse: collapse; } ");
+    httpd_resp_sendstr_chunk(req, "</style> <body>");
+    vTaskDelay(1);
     /* Get handle to embedded file upload script */
     extern const unsigned char upload_script_start[] asm("_binary_upload_script_html_start");
     extern const unsigned char upload_script_end[]   asm("_binary_upload_script_html_end");
@@ -114,6 +120,8 @@ static esp_err_t http_resp_dir_html(httpd_req_t *req, const char *dirpath)
 
     /* Iterate over all files / folders and fetch their names and sizes */
     while ((entry = readdir(dir)) != NULL) {
+        vTaskDelay(1); // allow other tasks to run in between..
+
         entrytype = (entry->d_type == DT_DIR ? "directory" : "file");
 
         strlcpy(entrypath + dirpath_len, entry->d_name, sizeof(entrypath) - dirpath_len);
@@ -131,7 +139,8 @@ static esp_err_t http_resp_dir_html(httpd_req_t *req, const char *dirpath)
         if (entry->d_type == DT_DIR) {
             httpd_resp_sendstr_chunk(req, "/");
         }
-        httpd_resp_sendstr_chunk(req, "\">");
+//        httpd_resp_sendstr_chunk(req, "\" style=\"color: #6fa\" >");
+        httpd_resp_sendstr_chunk(req, "\" >");
         httpd_resp_sendstr_chunk(req, entry->d_name);
         httpd_resp_sendstr_chunk(req, "</a></td><td>");
         httpd_resp_sendstr_chunk(req, entrytype);
@@ -343,11 +352,6 @@ static esp_err_t upload_post_handler(httpd_req_t *req)
      * the size of the file being uploaded */
     int remaining = req->content_len;
 
-
-    stzx_send_cmd(STZX_FILE_START,0);
-    /* name; DUMMY FOR NOW  */
-    stzx_send_cmd(STZX_FILE_DATA,0xA6);
-
     while (remaining > 0) {
 
         ESP_LOGI(TAG, "Remaining size : %d", remaining);
@@ -369,7 +373,6 @@ static esp_err_t upload_post_handler(httpd_req_t *req)
             return ESP_FAIL;
         }
 
-        for(size_t i=0;i<received;i++)     stzx_send_cmd(STZX_FILE_DATA,buf[i]);
 
         /* Write buffer content to file on storage */
         if (received && (received != fwrite(buf, 1, received, fd))) {
@@ -392,8 +395,6 @@ static esp_err_t upload_post_handler(httpd_req_t *req)
     /* Close file upon upload completion */
     fclose(fd);
     ESP_LOGI(TAG, "File reception complete");
-
-    stzx_send_cmd(STZX_FILE_END,0);
 
     /* Redirect onto root to see the updated file list */
     httpd_resp_set_status(req, "303 See Other");

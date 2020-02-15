@@ -77,7 +77,7 @@ void stzx_init()
     if(!i2s_writ_buff) printf("calloc of %d failed\n",STZX_I2S_WRITE_LEN_BYTES);
 
 
-    xTaskCreate(stzx_task, "stzx_task", 1024 * 3, NULL, 8, NULL);
+    xTaskCreate(stzx_task, "stzx_task", 1024 * 3, NULL, 9, NULL);
 }
 
 

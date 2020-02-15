@@ -8,13 +8,14 @@
 */
 
 #include <sys/param.h>
-
+#include <string.h>
 #include "esp_wifi.h"
 #include "esp_event_loop.h"
 #include "esp_log.h"
 #include "esp_system.h"
 #include "esp_spiffs.h"
 #include "nvs_flash.h"
+#include "nvs.h"
 
 #include "zx_server.h"
 #include "signal_from_zx.h"
@@ -33,7 +34,12 @@
 #define EXAMPLE_WIFI_SSID CONFIG_WIFI_SSID
 #define EXAMPLE_WIFI_PASS CONFIG_WIFI_PASSWORD
 
-static const char *TAG="example";
+static const char *TAG="zxiotmain";
+
+#define WIFI_LENGTH_SSID 32
+#define WIFI_LENGTH_PASS 64
+static char wifi_ssid[WIFI_LENGTH_SSID];
+static char wifi_pass[WIFI_LENGTH_PASS];
 
 /* Wi-Fi event handler */
 static esp_err_t event_handler(void *ctx, system_event_t *event)
@@ -71,10 +77,12 @@ static void initialise_wifi(void)
     ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_RAM));
     wifi_config_t wifi_config = {
         .sta = {
-            .ssid = EXAMPLE_WIFI_SSID,
-            .password = EXAMPLE_WIFI_PASS,
+            .ssid = "S1",
+            .password = "P1",
         },
     };
+    strlcpy((char *)wifi_config.sta.ssid, wifi_ssid, 32);
+    strlcpy((char *)wifi_config.sta.password, wifi_pass, 64);
     ESP_LOGI(TAG, "Setting WiFi configuration SSID %s...", wifi_config.sta.ssid);
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
     ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_STA, &wifi_config));
@@ -120,16 +128,89 @@ static esp_err_t init_spiffs(void)
     return ESP_OK;
 }
 
+/* non volatile storage */
+void nvs_sys_init(){
+    // Initialize NVS
+    esp_err_t err = nvs_flash_init();
+    if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+        // NVS partition was truncated and needs to be erased
+        // Retry nvs_flash_init
+        ESP_ERROR_CHECK(nvs_flash_erase());
+        err = nvs_flash_init();
+    }
+    ESP_ERROR_CHECK( err );
+
+    // Open
+    size_t l=WIFI_LENGTH_SSID;
+    printf("\n");
+    printf("Opening Non-Volatile Storage (NVS) handle... ");
+    nvs_handle my_handle;
+    err = nvs_open("zxstorage", NVS_READWRITE, &my_handle);
+    if (err != ESP_OK) {
+        printf("Error (%s) opening NVS handle!\n", esp_err_to_name(err));
+    } else {
+        printf("Done\n");
+
+        // Read
+        printf("Reading wifi namefrom NVS ... ");
+        err = nvs_get_str(my_handle, "WIFI_n", wifi_ssid, &l);
+        switch (err) {
+            case ESP_OK:
+                printf("Done\n");
+                printf("Name = %s\n", wifi_ssid);
+                break;
+            case ESP_ERR_NVS_NOT_FOUND:
+                printf("The value is not initialized yet!\n");
+                err = nvs_set_str(my_handle, "WIFI_n", EXAMPLE_WIFI_SSID);
+                printf((err != ESP_OK) ? "Set n Failed!\n" : "Done\n");
+                err = nvs_set_str(my_handle, "WIFI_p", EXAMPLE_WIFI_PASS);
+                printf((err != ESP_OK) ? "Set p Failed!\n" : "Done\n");
+                printf("Committing updates in NVS ... ");
+                err = nvs_commit(my_handle);
+                printf((err != ESP_OK) ? "C Failed!\n" : "Done\n");
+                err = nvs_get_str(my_handle, "WIFI_n", wifi_ssid, &l);
+                printf((err != ESP_OK) ? "RN Failed!\n" : "Done\n");
+                break;
+            default :
+                printf("Error (%s) reading!\n", esp_err_to_name(err));
+        }
+        l=WIFI_LENGTH_PASS;
+        err = nvs_get_str(my_handle, "WIFI_p", wifi_pass, &l);
+        printf((err != ESP_OK) ? "RP Failed!\n" : "Done\n");
+
+        // Commit written value.
+        // After setting any values, nvs_commit() must be called to ensure changes are written
+        // to flash storage. Implementations may write to storage at other times,
+        // but this is not guaranteed.
+        nvs_close(my_handle);
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 /* Declare the function which starts the file server.
  * Implementation of this function is to be found in
  * file_server.c */
 esp_err_t start_file_server(const char *base_path);
+
 
 void app_main()
 {
     //QueueHandle_t msgqueue=NULL;
     //msgqueue=xQueueCreate(10,sizeof(sfzx_evt_type_t));
 
+    nvs_sys_init();
     zxsrv_init();
     stzx_init();
     sfzx_init();
