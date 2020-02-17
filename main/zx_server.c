@@ -189,6 +189,23 @@ static void zxsrv_respond_fileload(const char *filepath, int dummy){
 
 }
 
+static void zxsrv_respond_inpstr(const char *question, int offset){
+
+   // const char *dirpath="/spiffs/";
+    zxfimg_create(ZXFI_STR_INP);
+    sprintf(txt_buf,"[ INPUT STRING ] ");
+    zxfimg_print_video(1,txt_buf);
+
+    sprintf(txt_buf,"[ INPUT STRING ] ");
+    zxfimg_print_video(3,question);
+
+    clear_mrespond_entries();
+    /* append default entry */
+    create_mrespond_entry(0, zxsrv_respond_filemenu, "/spiffs/", 0 );
+    send_zxf_image_compr();
+    zxfimg_delete();
+}
+
 
 static void zxsrv_respond_filemenu(const char *dirpath, int offset){
 
@@ -236,6 +253,7 @@ static void zxsrv_respond_filemenu(const char *dirpath, int offset){
         entry_num++;
     }
     /* append default entry */
+    create_mrespond_entry(55, zxsrv_respond_inpstr, "INP-QU", 0 ); // "R"
     create_mrespond_entry(0, zxsrv_respond_filemenu, "/spiffs/", 0 );
     closedir(dir);
     send_zxf_image_compr();
@@ -296,13 +314,21 @@ static void zxsrv_task(void *arg)
                             zxsrv_filename_received();
                         }
                     }
+                    if(file_first_bytes[0]==ZX_SAVE_TAG_MENU_RESPONSE+1 && evt.data==0x80){
+                            // send compressed second stage
+                            ESP_LOGI(TAG,"STRING INPUT addr %d \n",evt.addr); 
+                            for(int i=0;i<=evt.addr;i++){
+                                ESP_LOGI(TAG,"  STR field %d %02X \n",evt.addr,file_first_bytes[i] ); 
+                            }
+                    }
+
                     //
                     if(evt.addr==1){
                         if(file_first_bytes[0]==ZX_SAVE_TAG_LOADER_RESPONSE){
                             // send compressed second stage
                             ESP_LOGI(TAG,"Response from %dk ZX, send 2nd (compressed) stage \n",(evt.data-0x40)/4 );                        
                             menu_respond_from_key(0);
-                        } else if(evt.addr==1 && file_first_bytes[0]==ZX_SAVE_TAG_MENU_RESPONSE){
+                        } else if(file_first_bytes[0]==ZX_SAVE_TAG_MENU_RESPONSE){
                             // send compressed second stage
                             ESP_LOGI(TAG,"MENU RESPONSE KEYPRESS code %02X \n",evt.data); 
                             menu_respond_from_key(evt.data);

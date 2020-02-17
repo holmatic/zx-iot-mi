@@ -180,24 +180,27 @@ W2:
     djnz W2     ; 4usec * B*B
     pop BC
     djnz W1
-    LD E, 73    ; ID for menu reply
+    LD E, 74    ; ID for mstring reply
     call $031F  ; SAVE byte in E
-    LD E, 1    ; ID for menu reply
+	LD HL,(16400) ; VARS , start
+SLP:
+    LD A, (16404) ; E_LINE low byte
+    CP L
+    JR Z, S_END
+    LD E, (HL)    ; ID for menu reply
+    PUSH HL
     call $031F  ; SAVE byte in E
+    POP HL
+    INC HL
+    JR SLP
+S_END:
+
     LD E, 0    ; send dummy as end
     call $031F ;
-    ;POP HL ; remove ret addr
-    ;POP HL ; remove ret addr
-    ;POP HL ; remove ret addr
-    ;POP HL ; remove ret addr
-    ;POP HL ; remove ret addr
-    ;POP HL ; remove ret addr
-    ;POP HL ; remove ret addr ??
-   ; 7 times pop needed, 8 times is too much   POP HL or just reset
     ; /* reset stack pointer */
 	LD HL,(16386) ; ERR_SP
 	LD SP,HL
-    LD HL, 0676H    ; return address in NEXT-LINE like when LOADING
+    LD HL, $0676    ; return address in NEXT-LINE like when LOADING
 	EX (SP),HL
 #if 1
     ; run from calculator area
@@ -221,20 +224,10 @@ W2:
 line10:
    db 0,10  ;  line number 
    dw line20-$-2  ;line length 
-   db 241,38,13,20,65,118   ;LET a$ = INKEY$
+   db 238,38,13,118   ;INPUT a$
 
 line20:
-   db 0,20  ; line number 
-   dw line30-$-2  ;line length 
-   db 250,38,13,20,11,11,222,236,29,28,126,132,32,0,0,0,118   ;IF a$ = "" THEN GOTO 10
-
-line30:
-   db 0,30  ;  line number 
-   dw line50-$-2  ;line length 
-   db 244,197,11, 29,34,33,31,34, 11,26,196,38,13,118   ;POKE VAL "16536",CODE a$
-
-line50:
-   db 0,50  ;line number 
+   db 0,20  ;line number 
    dw dfile-$-2  ;line length 
    db $f5   ;PRINT 
    db $d4   ;USR 
@@ -254,7 +247,6 @@ line50:
  
 dfile: 
    db $76 
-   ;db c_Z,c_X,0,0,c_I,c_O,c_T,
    db $76,$76,$76,$76,$76,$76,$76,$76 
    db $76,$76,$76,$76,$76,$76,$76,$76 
    db $76,$76,$76,$76,$76,$76,$76,$76 

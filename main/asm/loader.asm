@@ -187,15 +187,11 @@ W2:
     LD E, 0    ; send dummy as end
     call $031F ;
 
-    POP HL ; remove ret addr
-    POP HL ; remove ret addr
-    POP HL ; remove ret addr
 
-    /* reset stack pointer */
+    ; reset stack pointer 
 	LD HL,(16386) ; ERR_SP
 	LD SP,HL
-
-    LD HL, 0676H    ; return address in NEXT-LINE like when LOADING
+    LD HL, $0676   ; return address in NEXT-LINE like when LOADING
 	EX (SP),HL
 #if 0
     ; run from calculator area
