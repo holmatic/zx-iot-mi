@@ -182,6 +182,7 @@ W2:
     djnz W1
     LD E, 74    ; ID for mstring reply
     call $031F  ; SAVE byte in E
+    ; result is in A$, just send the whole variables area as there will not be much more than a$
 	LD HL,(16400) ; VARS , start
 SLP:
     LD A, (16404) ; E_LINE low byte

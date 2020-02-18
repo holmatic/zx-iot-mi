@@ -28,8 +28,13 @@ void zxfimg_print_video(uint8_t linenum, const char* asciitxt);
 void zxfimg_set_img(uint16_t filepos,uint8_t data);
 uint8_t zxfimg_get_img(uint16_t filepos);
 uint16_t zxfimg_get_size();
-
 void zxfimg_delete();
+
+
+uint16_t convert_ascii_to_zx_str(const char* ascii_str); // return length
+uint8_t convert_ascii_to_zx_code(int ascii_char);
+void zx_string_to_ascii(const uint8_t* zxstr, size_t len,  char* buf_for_ascii);
+
 
 #ifdef __cplusplus
 }

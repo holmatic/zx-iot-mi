@@ -39,7 +39,8 @@ static const uint8_t* base_img[ZXFI_NUM]={ldrfile,menufile,str_inp};
 /* Helper for text code conversion */
 
 static const char* CODETABLE="#_~\"@$:?()><=+-*/;,.0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";	/* ZX81 code table, starting at 28 */
-static uint8_t convert_ascii_to_zx_code(int ascii_char)
+
+uint8_t convert_ascii_to_zx_code(int ascii_char)
 {
 	uint8_t zx_code=0;
 	int upper_ascii_c=toupper(ascii_char);
@@ -57,7 +58,7 @@ static uint8_t convert_ascii_to_zx_code(int ascii_char)
 
 static uint8_t zx_txt_buf[33];
 
-static uint16_t convert_ascii_to_zx_str(const char* ascii_str) // return length
+uint16_t convert_ascii_to_zx_str(const char* ascii_str) // return length
 {
 	uint8_t* d=zx_txt_buf;
 	uint8_t inverse=0;
@@ -74,6 +75,20 @@ static uint16_t convert_ascii_to_zx_str(const char* ascii_str) // return length
 	return len;
 }
 
+void zx_string_to_ascii(const uint8_t* zxstr, size_t len,  char* buf_for_ascii)
+{
+    int i;
+    uint8_t z;
+    char c;
+    for(i=0;i<len;i++) {
+        c='?';
+        z=zxstr[i] & 0x7f; // ignore invert
+        if(z>=8 && z<64) c=CODETABLE[z-8];
+        *buf_for_ascii++=c;
+    }
+    *buf_for_ascii=0;   // string end
+    return;
+}
 
 static uint8_t *memimg=0;
 
