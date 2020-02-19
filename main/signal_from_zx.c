@@ -338,17 +338,23 @@ static void analyze_for_noise()
 
 //static char debugbuf[250];
 
+#define INITIAL_IGNORED_PACKETS 20
+
 static void analyze_data(uint8_t* buf, size_t size)
 {
     uint32_t ix;
     uint16_t v;
-	if(stat.packets_received==0)
+
+	++stat.packets_received;
+
+	if(stat.packets_received<INITIAL_IGNORED_PACKETS)
+		return;
+	else if(stat.packets_received==INITIAL_IGNORED_PACKETS)
 		create_initial_stat(buf);
 	else
 		do_some_stat(buf);
 
-	++stat.packets_received;
-	if(stat.packets_received%8000==2 ){
+	if(stat.packets_received%8000==32 ){
 		ESP_LOGV(TAG,"stat.packets_received %d \n",stat.packets_received);
 		ESP_LOGI(TAG,"Min Max Thresh %d %d %d \n", stat.min_v, stat.max_v, stat.thresh_v  );
 		ESP_LOGI(TAG,"Current %d %d %d,  \n", level.current, level.duration,level.dur_since_last_0_lvl  );
@@ -404,7 +410,10 @@ static void sfzx_task(void*arg)
 {
     i2s_event_t evt;
 	size_t bytes_read;
+	uint8_t ignore_first_packets=20;
     ESP_LOGI(TAG,"sfzx_task START \n");
+	//vTaskDelay(100 / portTICK_PERIOD_MS); // allow some startup and settling time (might help, not proven)
+	//i2s_adc_enable(SFZX_I2S_NUM);
     while(true){
 		if(pdTRUE ==  xQueueReceive( i2squeue, &evt, 10 / portTICK_RATE_MS ) ) {
 			if(evt.type==I2S_EVENT_RX_DONE){
@@ -413,7 +422,10 @@ static void sfzx_task(void*arg)
                 if (bytes_read!=SFZX_I2S_READ_LEN_BYTES){
                     ESP_LOGW(TAG, "len mismatch, %d %d",bytes_read,SFZX_I2S_READ_LEN_BYTES);
                 }
-                analyze_data(i2s_read_buff,SFZX_I2S_READ_LEN_BYTES);
+				if (ignore_first_packets)
+					ignore_first_packets--;
+				else
+                	analyze_data(i2s_read_buff,SFZX_I2S_READ_LEN_BYTES);
 			}
 			else ESP_LOGW(TAG,"Unexpected evt %d",evt.type);
 		}

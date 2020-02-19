@@ -19,6 +19,7 @@ Works asynchroously, thus communication is done via queues
 #include "esp_err.h"
 #include "esp_log.h"
 #include "esp_vfs.h"
+#include "esp_wifi.h"
 #include "zx_file_img.h"
 #include "signal_to_zx.h"
 #include "zx_server.h"
@@ -58,6 +59,7 @@ static void create_mrespond_entry(uint8_t zxkey, resp_func func, const char* fun
 static bool zxsrv_respond_filemenu(const char *dirpath, int); // fwd declare
 static bool zxsrv_respond_fileload(const char *filepath, int dummy);
 static bool zxsrv_respond_inpstr(const char *question, int offset);
+static bool zxsrv_respond_wifiscan(const char *dirpath, int offset);
 
 
 
@@ -152,6 +154,48 @@ static bool zxsrv_respond_inpstr(const char *question, int offset){
 }
 
 
+ 
+
+static bool zxsrv_respond_wifiscan(const char *dirpath, int offset){
+
+    wifi_ap_record_t * ap_list;
+    uint16_t st=0,num_ap=0;
+
+    wifi_scan_config_t scanConf = {
+        .ssid = NULL,
+        .bssid = NULL,
+        .channel = 0,
+        .show_hidden = false
+    };
+
+    ESP_LOGI(TAG, "WIFI SCAN ...");
+    ESP_ERROR_CHECK(esp_wifi_scan_start(&scanConf, true));
+    ESP_LOGI(TAG, "SCAN done.");
+    ESP_ERROR_CHECK(esp_wifi_scan_get_ap_num(&num_ap));
+    ESP_LOGI(TAG, "Num WIFI stations: %d ",num_ap);
+    if (num_ap>12) num_ap=12;
+    ap_list=calloc(num_ap, sizeof(wifi_ap_record_t) );
+    ESP_ERROR_CHECK(esp_wifi_scan_get_ap_records(&num_ap, ap_list));    
+
+    zxfimg_create(ZXFI_MENU_KEY);
+    sprintf(txt_buf,"[ WIFI MENU ]:");
+    zxfimg_print_video(1,txt_buf);
+
+    clear_mrespond_entries();
+    /* Iterate over all files / folders and fetch their names and sizes */
+    for (st=0;st<num_ap;st++) {
+        ESP_LOGI(TAG, "Found %s  %d ",ap_list[st].ssid ,ap_list[st].rssi);
+        create_mrespond_entry(st+0x1c, zxsrv_respond_inpstr,  (char*) ap_list[st].ssid, 0 );
+        sprintf(txt_buf,"[%X] %s    (%d)",st, ap_list[st].ssid , (128+(int)ap_list[st].rssi)*100/128  );
+        zxfimg_print_video(st+3,txt_buf);
+    }
+    free(ap_list);
+    /* append default entry */
+    create_mrespond_entry(55, zxsrv_respond_inpstr, "INP-QU", 0 ); // "R"
+    create_mrespond_entry(0, zxsrv_respond_filemenu, "/spiffs/", 0 );
+    return true; // to send_zxf_image_compr();zxfimg_delete();
+}
+
 
 
 static bool zxsrv_respond_filemenu(const char *dirpath, int offset){
@@ -175,7 +219,7 @@ static bool zxsrv_respond_filemenu(const char *dirpath, int offset){
         ESP_LOGE(TAG, "Failed to stat dir : %s", dirpath);
     //    /* Respond with 404 Not Found */
     //    httpd_resp_send_err(req, HTTPD_404_NOT_FOUND, "Directory does not exist");
-        return;
+        return false;
     }
     zxfimg_create(ZXFI_MENU_KEY);
     sprintf(txt_buf,"[ FILE MENU ]: (%s) ",dirpath);
@@ -199,8 +243,13 @@ static bool zxsrv_respond_filemenu(const char *dirpath, int offset){
         zxfimg_print_video(entry_num+3,txt_buf);
         entry_num++;
     }
-    /* append default entry */
+    sprintf(txt_buf,"--- VERSION: 0.03A ----");
+    zxfimg_print_video(22,txt_buf);
+
+ 
     create_mrespond_entry(55, zxsrv_respond_inpstr, "INP-QU", 0 ); // "R"
+    create_mrespond_entry(60, zxsrv_respond_wifiscan, "WIFI", 0 ); // "W"
+    /* append default entry */
     create_mrespond_entry(0, zxsrv_respond_filemenu, "/spiffs/", 0 );
     closedir(dir);
     return true; // to send_zxf_image_compr();zxfimg_delete();
