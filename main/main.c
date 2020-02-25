@@ -42,6 +42,12 @@ static const char *TAG="zxiotmain";
 static char wifi_ssid[WIFI_LENGTH_SSID];
 static char wifi_pass[WIFI_LENGTH_PASS];
 
+
+static int wifi_connect_retry=0;
+
+
+char wifi_stat_msg[33];
+
 /* Wi-Fi event handler */
 static esp_err_t event_handler(void *ctx, system_event_t *event)
 {
@@ -49,21 +55,32 @@ static esp_err_t event_handler(void *ctx, system_event_t *event)
     case SYSTEM_EVENT_STA_START:
         ESP_LOGI(TAG, "SYSTEM_EVENT_STA_START");
         ESP_ERROR_CHECK(esp_wifi_connect());
+        wifi_connect_retry=0;
+        sprintf(wifi_stat_msg,"[ WIFI ] INIT...");        
         break;
     case SYSTEM_EVENT_STA_GOT_IP:
         ESP_LOGI(TAG, "SYSTEM_EVENT_STA_GOT_IP");
         ESP_LOGI(TAG, "Got IP: '%s'",
                 ip4addr_ntoa(&event->event_info.got_ip.ip_info.ip));
+        sprintf(wifi_stat_msg,"[ WIFI ] IP=%s",ip4addr_ntoa(&event->event_info.got_ip.ip_info.ip));        
+        //sprintf(wifi_stat_msg,"WIFI  :-)");        
+        wifi_connect_retry=0;
         break;
     case SYSTEM_EVENT_STA_DISCONNECTED:
         ESP_LOGI(TAG, "SYSTEM_EVENT_STA_DISCONNECTED");
-        ESP_ERROR_CHECK(esp_wifi_connect());
+        if (wifi_connect_retry<3){      // we cannot scan for networks if we always immediately retry. Timeout for now, maybe later on retry after break..
+            ESP_ERROR_CHECK(esp_wifi_connect());
+            wifi_connect_retry++;
+        }
+        sprintf(wifi_stat_msg,"[ WIFI ]  -> [W] TO CONFIG ");        
         break;
     default:
         break;
     }
     return ESP_OK;
 }
+
+
 
 /* Function to initialize Wi-Fi at station */
 static void initialise_wifi(void)
@@ -212,14 +229,6 @@ void app_main()
     //msgqueue=xQueueCreate(10,sizeof(sfzx_evt_type_t));
 
 
-
-
-    nvs_sys_init();
-    zxsrv_init();
-    stzx_init();
-    sfzx_init();
-
-
     ESP_LOGI(TAG, "Starting OTA check ...");
 
 
@@ -233,6 +242,14 @@ void app_main()
     }
     ESP_LOGI(TAG, "Running partition type %d subtype %d (offset 0x%08x)",
              running->type, running->subtype, running->address);
+
+
+
+
+    nvs_sys_init();
+    zxsrv_init();
+    stzx_init();
+    sfzx_init();
 
 
 

@@ -20,6 +20,8 @@ Works asynchroously, thus communication is done via queues
 #include "esp_log.h"
 #include "esp_vfs.h"
 #include "esp_wifi.h"
+#include "nvs_flash.h"
+#include "nvs.h"
 #include "zx_file_img.h"
 #include "signal_to_zx.h"
 #include "zx_server.h"
@@ -128,11 +130,17 @@ static bool zxsrv_respond_fileload(const char *filepath, int dummy){
 
 
 static bool zxsrv_retrieve_wlanpasswd(const char *inp, int len){
-    char namebuf[FILFB_SIZE];
+    nvs_handle my_handle;
+
+    char pwbuf[FILFB_SIZE];
     ESP_LOGI(TAG, "zxsrv_retrieve_wlanpasswd:");
  
-    zx_string_to_ascii((uint8_t*)inp,len,namebuf);
-    ESP_LOGI(TAG, "WLANPASSWD : %s", namebuf);
+    zx_string_to_ascii((uint8_t*)inp,len,pwbuf);
+    ESP_LOGI(TAG, "WLANPASSWD : %s", pwbuf);
+    ESP_ERROR_CHECK( nvs_open("zxstorage", NVS_READWRITE, &my_handle) );
+    ESP_ERROR_CHECK( nvs_set_str(my_handle, "WIFI_p", pwbuf) );
+    ESP_ERROR_CHECK( nvs_commit(my_handle) ); 
+    nvs_close(my_handle);
 
     return zxsrv_respond_filemenu("/spiffs/", 0);    
 }
@@ -154,12 +162,34 @@ static bool zxsrv_respond_inpstr(const char *question, int offset){
 }
 
 
+static bool zxsrv_wifi_inp_pass(const char *wifi_name, int offset){
+
+    nvs_handle my_handle;
+
+    zxfimg_create(ZXFI_STR_INP);
+    sprintf(txt_buf,"[ ENTER PASSWORD ] for ");
+    zxfimg_print_video(1,txt_buf);
+    zxfimg_print_video(3,wifi_name);
+
+    ESP_ERROR_CHECK( nvs_open("zxstorage", NVS_READWRITE, &my_handle) );
+    ESP_ERROR_CHECK( nvs_set_str(my_handle, "WIFI_n", wifi_name) );
+    ESP_ERROR_CHECK( nvs_commit(my_handle) ); 
+    nvs_close(my_handle);
+
+    clear_mrespond_entries();
+    /* append default entry */
+    create_mrespond_entry(0, zxsrv_retrieve_wlanpasswd, "", 0 );
+    return true; // to send_zxf_image_compr();zxfimg_delete();
+}
+
+
  
 
 static bool zxsrv_respond_wifiscan(const char *dirpath, int offset){
 
     wifi_ap_record_t * ap_list;
     uint16_t st=0,num_ap=0;
+    //esp_err_t err;
 
     wifi_scan_config_t scanConf = {
         .ssid = NULL,
@@ -169,7 +199,10 @@ static bool zxsrv_respond_wifiscan(const char *dirpath, int offset){
     };
 
     ESP_LOGI(TAG, "WIFI SCAN ...");
-    ESP_ERROR_CHECK(esp_wifi_scan_start(&scanConf, true));
+    while (  ESP_OK != esp_wifi_scan_start(&scanConf, true) )  {
+        ESP_LOGI(TAG, "  SCAN failed, retry...");
+        vTaskDelay(133 / portTICK_PERIOD_MS);    
+    }
     ESP_LOGI(TAG, "SCAN done.");
     ESP_ERROR_CHECK(esp_wifi_scan_get_ap_num(&num_ap));
     ESP_LOGI(TAG, "Num WIFI stations: %d ",num_ap);
@@ -185,7 +218,7 @@ static bool zxsrv_respond_wifiscan(const char *dirpath, int offset){
     /* Iterate over all files / folders and fetch their names and sizes */
     for (st=0;st<num_ap;st++) {
         ESP_LOGI(TAG, "Found %s  %d ",ap_list[st].ssid ,ap_list[st].rssi);
-        create_mrespond_entry(st+0x1c, zxsrv_respond_inpstr,  (char*) ap_list[st].ssid, 0 );
+        create_mrespond_entry(st+0x1c, zxsrv_wifi_inp_pass,  (char*) ap_list[st].ssid, 0 );
         sprintf(txt_buf,"[%X] %s    (%d)",st, ap_list[st].ssid , (128+(int)ap_list[st].rssi)*100/128  );
         zxfimg_print_video(st+3,txt_buf);
     }
@@ -197,6 +230,7 @@ static bool zxsrv_respond_wifiscan(const char *dirpath, int offset){
 }
 
 
+extern char wifi_stat_msg[];
 
 static bool zxsrv_respond_filemenu(const char *dirpath, int offset){
 
@@ -243,7 +277,9 @@ static bool zxsrv_respond_filemenu(const char *dirpath, int offset){
         zxfimg_print_video(entry_num+3,txt_buf);
         entry_num++;
     }
-    sprintf(txt_buf,"--- VERSION: 0.03C ----");
+    zxfimg_print_video(20,wifi_stat_msg);
+
+    sprintf(txt_buf,"--- VERSION: 0.04C ----");
     zxfimg_print_video(22,txt_buf);
 
  
