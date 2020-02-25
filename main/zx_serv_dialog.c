@@ -243,7 +243,7 @@ static bool zxsrv_respond_filemenu(const char *dirpath, int offset){
         zxfimg_print_video(entry_num+3,txt_buf);
         entry_num++;
     }
-    sprintf(txt_buf,"--- VERSION: 0.03A ----");
+    sprintf(txt_buf,"--- VERSION: 0.03C ----");
     zxfimg_print_video(22,txt_buf);
 
  

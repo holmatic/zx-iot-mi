@@ -14,6 +14,7 @@
 #include "esp_log.h"
 #include "esp_system.h"
 #include "esp_spiffs.h"
+#include "esp_ota_ops.h"
 #include "nvs_flash.h"
 #include "nvs.h"
 
@@ -210,10 +211,31 @@ void app_main()
     //QueueHandle_t msgqueue=NULL;
     //msgqueue=xQueueCreate(10,sizeof(sfzx_evt_type_t));
 
+
+
+
     nvs_sys_init();
     zxsrv_init();
     stzx_init();
     sfzx_init();
+
+
+    ESP_LOGI(TAG, "Starting OTA check ...");
+
+
+    const esp_partition_t *configured = esp_ota_get_boot_partition();
+    const esp_partition_t *running = esp_ota_get_running_partition();
+
+    if (configured != running) {
+        ESP_LOGW(TAG, "Configured OTA boot partition at offset 0x%08x, but running from offset 0x%08x",
+                 configured->address, running->address);
+        ESP_LOGW(TAG, "(This can happen if either the OTA boot data or preferred boot image become corrupted somehow.)");
+    }
+    ESP_LOGI(TAG, "Running partition type %d subtype %d (offset 0x%08x)",
+             running->type, running->subtype, running->address);
+
+
+
 
 	initialise_wifi();
 
