@@ -1,7 +1,7 @@
 <table class="fixed" border="0">
     <col width="1000px" /><col width="500px" />
     <tr><td>
-        <h2>ZX-IOT File Server v01</h2>
+        <h2>ZX-IOT File Server</h2>
     </td><td>
         <table border="0">
             <tr>
@@ -49,8 +49,8 @@ function upload() {
         alert("File path on server cannot have spaces!");
     } else if (filePath[filePath.length-1] == '/') {
         alert("File name not specified after path!");
-    } else if (fileInput[0].size > 200*1024) {
-        alert("File size must be less than 200KB!");
+    } else if (fileInput[0].size > 980*1024) {
+        alert("File size must be less than 980KB!");
     } else {
         document.getElementById("newfile").disabled = true;
         document.getElementById("filepath").disabled = true;

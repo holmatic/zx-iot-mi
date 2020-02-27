@@ -15,6 +15,7 @@
 #include <dirent.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "esp_ota_ops.h"
 
 #include "esp_err.h"
 #include "esp_log.h"
@@ -297,6 +298,11 @@ static esp_err_t upload_post_handler(httpd_req_t *req)
     char filepath[FILE_PATH_MAX];
     FILE *fd = NULL;
     struct stat file_stat;
+    bool is_ota=false;
+    const char* iotfilename="zx_iot.bin";
+    const esp_partition_t *update_partition = NULL;
+    esp_ota_handle_t update_handle = 0 ;
+    esp_err_t err;
 
     /* Skip leading "/upload" from URI to get filename */
     /* Note sizeof() counts NULL termination hence the -1 */
@@ -322,26 +328,41 @@ static esp_err_t upload_post_handler(httpd_req_t *req)
         return ESP_FAIL;
     }
 
-    /* File cannot be larger than a limit */
-    if (req->content_len > MAX_FILE_SIZE) {
-        ESP_LOGE(TAG, "File too large : %d bytes", req->content_len);
-        /* Respond with 400 Bad Request */
-        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST,
-                            "File size must be less than "
-                            MAX_FILE_SIZE_STR "!");
-        /* Return failure to close underlying connection else the
-         * incoming file content will keep the socket busy */
-        return ESP_FAIL;
-    }
+    if( strlen(filename)>=strlen(iotfilename) && strcmp( &filename[strlen(filename)-strlen(iotfilename)], iotfilename) == 0 ){
+        ESP_LOGE(TAG, "OTA file recognized : %s ", filename);
+        is_ota=true;
 
-    fd = fopen(filepath, "w");
-    if (!fd) {
-        ESP_LOGE(TAG, "Failed to create file : %s", filepath);
-        /* Respond with 500 Internal Server Error */
-        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Failed to create file");
-        return ESP_FAIL;
-    }
+        update_partition = esp_ota_get_next_update_partition(NULL);
+        ESP_LOGI(TAG, "Writing to partition subtype %d at offset 0x%x",
+                update_partition->subtype, update_partition->address);
+        assert(update_partition != NULL);
+        err = esp_ota_begin(update_partition, OTA_SIZE_UNKNOWN, &update_handle);
+        if (err != ESP_OK) {
+            ESP_LOGE(TAG, "esp_ota_begin failed (%s)", esp_err_to_name(err));
+        }
 
+
+    } else {
+        /* File cannot be larger than a limit */
+        if (req->content_len > MAX_FILE_SIZE) {
+            ESP_LOGE(TAG, "File too large : %d bytes", req->content_len);
+            /* Respond with 400 Bad Request */
+            httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST,
+                                "File size must be less than "
+                                MAX_FILE_SIZE_STR "!");
+            /* Return failure to close underlying connection else the
+            * incoming file content will keep the socket busy */
+            return ESP_FAIL;
+        }
+
+        fd = fopen(filepath, "w");
+        if (!fd) {
+            ESP_LOGE(TAG, "Failed to create file : %s", filepath);
+            /* Respond with 500 Internal Server Error */
+            httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Failed to create file");
+            return ESP_FAIL;
+        }
+    }
     ESP_LOGI(TAG, "Receiving file : %s...", filename);
 
     /* Retrieve the pointer to scratch buffer for temporary storage */
@@ -356,44 +377,69 @@ static esp_err_t upload_post_handler(httpd_req_t *req)
 
         ESP_LOGI(TAG, "Remaining size : %d", remaining);
         /* Receive the file part by part into a buffer */
-        if ((received = httpd_req_recv(req, buf, MIN(remaining, SCRATCH_BUFSIZE))) <= 0) {
+        if ((received = httpd_req_recv(req, buf, MIN(remaining, SCRATCH_BUFSIZE))) <= 0) { // seems not to be okay with reveiving just 48 bytes
+//        if ((received = httpd_req_recv(req, buf, SCRATCH_BUFSIZE)) <= 0) {
             if (received == HTTPD_SOCK_ERR_TIMEOUT) {
                 /* Retry if timeout occurred */
+                if(remaining<=512) break; // see strange behaviour with small last packets
                 continue;
             }
 
             /* In case of unrecoverable error,
              * close and delete the unfinished file*/
-            fclose(fd);
-            unlink(filepath);
-
+            if(!is_ota){
+                fclose(fd);
+                unlink(filepath);
+            }
             ESP_LOGE(TAG, "File reception failed!");
             /* Respond with 500 Internal Server Error */
             httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Failed to receive file");
             return ESP_FAIL;
         }
 
+        if(is_ota){
+            if(received){
+                err = esp_ota_write( update_handle, (const void *)buf, received);
+//                if (err != ESP_OK) {
+//                    ESP_LOGE(TAG, "esp_ota_write failed (%s)!", esp_err_to_name(err));
+//                }
+                vTaskDelay(1);
+            }
+        } else {
+            /* Write buffer content to file on storage */
+            if (received && (received != fwrite(buf, 1, received, fd))) {
+                /* Couldn't write everything to file!
+                * Storage may be full? */
+                fclose(fd);
+                unlink(filepath);
 
-        /* Write buffer content to file on storage */
-        if (received && (received != fwrite(buf, 1, received, fd))) {
-            /* Couldn't write everything to file!
-             * Storage may be full? */
-            fclose(fd);
-            unlink(filepath);
-
-            ESP_LOGE(TAG, "File write failed!");
-            /* Respond with 500 Internal Server Error */
-            httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Failed to write file to storage");
-            return ESP_FAIL;
+                ESP_LOGE(TAG, "File write failed!");
+                /* Respond with 500 Internal Server Error */
+                httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Failed to write file to storage");
+                return ESP_FAIL;
+            }
         }
-
         /* Keep track of remaining size of
          * the file left to be uploaded */
         remaining -= received;
     }
 
     /* Close file upon upload completion */
-    fclose(fd);
+    if(is_ota){
+        if (esp_ota_end(update_handle) != ESP_OK) {
+            ESP_LOGE(TAG, "esp_ota_end failed!");
+        }
+
+        err = esp_ota_set_boot_partition(update_partition);
+        if (err != ESP_OK) {
+            ESP_LOGE(TAG, "esp_ota_set_boot_partition failed (%s)!", esp_err_to_name(err));
+        }
+        ESP_LOGI(TAG, "Prepare to restart system!");
+        //esp_restart();
+
+    }else{
+        fclose(fd);
+    }
     ESP_LOGI(TAG, "File reception complete");
 
     /* Redirect onto root to see the updated file list */

@@ -279,7 +279,7 @@ static bool zxsrv_respond_filemenu(const char *dirpath, int offset){
     }
     zxfimg_print_video(20,wifi_stat_msg);
 
-    sprintf(txt_buf,"--- VERSION: 0.04C ----");
+    sprintf(txt_buf,"--- VERSION: 0.05A ----");
     zxfimg_print_video(22,txt_buf);
 
  
