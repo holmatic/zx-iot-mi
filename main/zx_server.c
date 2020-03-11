@@ -113,8 +113,9 @@ static void zxsrv_task(void *arg)
                     if(!file_name_len){
                         if( evt.data&0x80 ){
                             file_name_len=evt.addr+1;
+                            file_first_bytes[evt.addr] ^= 0x80; // convert all name to upper case                       
                             zxsrv_filename_received();
-                        }
+                        } 
                     }
                     if(file_first_bytes[0]==ZX_SAVE_TAG_MENU_RESPONSE+1 && evt.data==0x80){
                             // send compressed second stage

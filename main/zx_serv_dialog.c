@@ -259,6 +259,10 @@ static bool zxsrv_respond_filemenu(const char *dirpath, int offset){
     sprintf(txt_buf,"[ FILE MENU ]: (%s) ",dirpath);
     zxfimg_print_video(1,txt_buf);
 
+    zxfimg_cpzx_video (2, (const uint8_t *) "\x83\x83\x04\x04\x00\x04\x00\x00\x02\x00\x00\x00\x00\x00\x85", 15);
+    zxfimg_cpzx_video (3, (const uint8_t *) "\x00\x06\x00\x02\x06\x00\x83\x00\x84\x01\x87\x03\x86\x00\x84\x03\x01", 17);
+    zxfimg_cpzx_video (4, (const uint8_t *) "\x81\x83\x04\x06\x02\x04\x00\x00\x81\x04\x02\x83\x06\x00\x02\x83\x04\x00\x27\x3e\x00\x3f\x3d\x16\x39\x2a\x26\x32", 28);
+
     clear_mrespond_entries();
     /* Iterate over all files / folders and fetch their names and sizes */
     while ((entry = readdir(dir)) != NULL && entry_num<16) {
@@ -274,12 +278,12 @@ static bool zxsrv_respond_filemenu(const char *dirpath, int offset){
         create_mrespond_entry(entry_num+0x1c, zxsrv_respond_fileload,  entrypath, 0 );
 
         sprintf(txt_buf," [%X] %s %s",entry_num,entry->d_name,entrytype);
-        zxfimg_print_video(entry_num+3,txt_buf);
+        zxfimg_print_video(entry_num+6,txt_buf);
         entry_num++;
     }
     zxfimg_print_video(20,wifi_stat_msg);
 
-    sprintf(txt_buf,"--- VERSION: 0.05A ----");
+    sprintf(txt_buf,"--- VERSION: 0.05C ----");
     zxfimg_print_video(22,txt_buf);
 
  
