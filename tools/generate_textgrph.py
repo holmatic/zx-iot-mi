@@ -2,14 +2,23 @@
 import os
 
 
-gmain="""
-                 #           #
-##### #   #                  #
-   #   # #      ###   ###   #####
-  #     #   ##   #   #   #   # 
- #     # #       #   #   #   #       B Y   Z X - T E A M
-##### #   #     ###   ###     ###   
+g2main="""
+                 #          #
+##### #   #                 #      B Y   Z X - T E A M
+   #   # #      ###  ###  #####
+  #     #   ##   #  #   #  # 
+ #     # #       #  #   #  #    
+##### #   #     ###  ###    ###   
 """
+
+gmain="""
+      # # #               #    #     ###  ###  ##   #   B Y Z X
+O O # # # # #     ###  # #    #   # #    #    #  #      
+##### # # # # #    #    #  ## # # # ###   ##  ###  ##   T E A M
+  ++# # # # #     #    # #    # # # #       # #     #   
+      # # #      ##### #  #    # #   ###  ##  #   ####  2 0 2 0
+"""
+
 
 def adjust_lines( l_tupl ):
     ll=max( len(l) for l in l_tupl )
@@ -63,6 +72,7 @@ def cvrt(gstr,line):
             if cs=='++  ' : zxc=10
             if cs=='##++' : zxc=137
             if cs=='++##' : zxc=138
+            #if '+' in cs:print("MMM:",cs)
             for c in cs:
                 if ord('A')<= ord(c)<=ord('Z'): zxc=38+ord(c)-ord('A')
                 if ord('0')<= ord(c)<=ord('9'): zxc=28+ord(c)-ord('0')
