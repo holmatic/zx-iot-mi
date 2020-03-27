@@ -137,6 +137,7 @@ static void mem_insert(uint8_t* src, uint16_t insert_pos, uint16_t ins_size){
 
 void zxfimg_cpzx_video(uint8_t linenum, const uint8_t* zxstr, uint16_t len) {
 	uint16_t dfile_pos=mem_rd16(16396);//dfile
+	linenum+=1; //find initial lines
 	while(linenum){
 		if(memimg[dfile_pos++ -img_offs]==0x76) linenum--;
 	}

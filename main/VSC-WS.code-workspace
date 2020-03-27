@@ -1,0 +1,31 @@
+{
+	"folders": [
+		{
+			"path": "C:\\Users\\Holmatic\\esp"
+		},
+		{
+			"path": "C:\\Users\\Holmatic\\Desktop\\esp-idf"
+		},
+		{
+			"path": "C:\\Users\\Holmatic\\Documents\\Inter\\ZX20_OS"
+		}
+	],
+	"settings": {
+		"files.associations": {
+			"gpio.h": "c",
+			"*.ipp": "c",
+			"array": "c",
+			"string": "c",
+			"random": "c",
+			"queue.h": "c",
+			"esp_err.h": "c",
+			"zx_file_img.h": "c",
+			"task.h": "c",
+			"nvs.h": "c",
+			"esp_wifi.h": "c",
+			"nvs_flash.h": "c",
+			"esp_ota_ops.h": "c",
+			"signal_to_zx.h": "c"
+		}
+	}
+}

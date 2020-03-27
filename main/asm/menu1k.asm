@@ -197,7 +197,7 @@ W2:
     ; /* reset stack pointer */
 	LD HL,(16386) ; ERR_SP
 	LD SP,HL
-    LD HL, 0676H    ; return address in NEXT-LINE like when LOADING
+    LD HL, $0676    ; return address in NEXT-LINE like when LOADING
 	EX (SP),HL
 #if 1
     ; run from calculator area

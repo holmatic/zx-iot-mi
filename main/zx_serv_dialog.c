@@ -211,16 +211,21 @@ static bool zxsrv_respond_wifiscan(const char *dirpath, int offset){
     ESP_ERROR_CHECK(esp_wifi_scan_get_ap_records(&num_ap, ap_list));    
 
     zxfimg_create(ZXFI_MENU_KEY);
-    sprintf(txt_buf,"[ WIFI MENU ]:");
-    zxfimg_print_video(1,txt_buf);
+    //sprintf(txt_buf,"[ WIFI MENU ]:");
+    //zxfimg_print_video(1,txt_buf);
+
+    zxfimg_cpzx_video (0, (const uint8_t *) "\x1c\x34\x04\x05\x05\x05\x04\x00\x00\x06\x00\x06\x00\x87\x01\x00\x06\x86\x00\x06\x04\x06\x00\x00\x87\x03\x01\x3c\x2e\x2b\x2e", 31);
+    zxfimg_cpzx_video (1, (const uint8_t *) "\x03\x89\x05\x05\x05\x05\x05\x01\x00\x05\x05\x05\x03\x85\x00\x00\x82\x84\x00\x05\x86\x01\x00\x00\x05\x06\x01\x00\x28\x34\x33", 31);
+    zxfimg_cpzx_video (2, (const uint8_t *) "\x00\x00\x00\x01\x01\x01\x00\x00\x00\x02\x02\x00\x00\x00\x03\x01\x01\x02\x02\x00\x02\x00\x00\x00\x01\x01\x01\x00\x2b\x2e\x2c", 31);
+
 
     clear_mrespond_entries();
     /* Iterate over all files / folders and fetch their names and sizes */
     for (st=0;st<num_ap;st++) {
         ESP_LOGI(TAG, "Found %s  %d ",ap_list[st].ssid ,ap_list[st].rssi);
         create_mrespond_entry(st+0x1c, zxsrv_wifi_inp_pass,  (char*) ap_list[st].ssid, 0 );
-        sprintf(txt_buf,"[%X] %s    (%d)",st, ap_list[st].ssid , (128+(int)ap_list[st].rssi)*100/128  );
-        zxfimg_print_video(st+3,txt_buf);
+        sprintf(txt_buf," [%X] %s (%d)",st, ap_list[st].ssid , (128+(int)ap_list[st].rssi)*100/128  );
+        zxfimg_print_video(st+5,txt_buf);
     }
     free(ap_list);
     /* append default entry */
@@ -259,10 +264,9 @@ static bool zxsrv_respond_filemenu(const char *dirpath, int offset){
     //sprintf(txt_buf,"[ FILE MENU ]: (%s) ",dirpath);
     //zxfimg_print_video(1,txt_buf);
 
-    zxfimg_cpzx_video (1, (const uint8_t *) "\x34\x34\x04\x05\x05\x05\x04\x00\x87\x83\x04\x87\x87\x01\x00\x06\x00\x04\x06\x03\x87\x03\x01\x06\x86\x00\x01\x00\x27\x3e\x3f\x3d", 32);
-    zxfimg_cpzx_video (2, (const uint8_t *) "\x03\x89\x05\x05\x05\x05\x05\x01\x00\x06\x00\x87\x86\x02\x01\x05\x05\x05\x07\x01\x00\x03\x04\x07\x01\x02\x05\x00\x39\x2a\x26\x32", 32);
-    zxfimg_cpzx_video (3, (const uint8_t *) "\x00\x00\x00\x01\x01\x01\x00\x00\x02\x03\x03\x02\x00\x01\x00\x02\x02\x00\x02\x03\x00\x03\x00\x01\x00\x03\x03\x00\x1e\x1c\x1e\x1c", 32);
-
+    zxfimg_cpzx_video (0, (const uint8_t *) "\x1c\x34\x04\x05\x05\x05\x04\x00\x00\x83\x04\x87\x87\x01\x00\x06\x00\x04\x06\x01\x06\x03\x87\x03\x04\x02\x00\x27\x3e\x3f\x3d", 31);
+    zxfimg_cpzx_video (1, (const uint8_t *) "\x03\x89\x05\x05\x05\x05\x05\x01\x00\x06\x00\x87\x86\x02\x01\x05\x05\x05\x07\x01\x02\x86\x85\x03\x00\x84\x00\x39\x2a\x26\x32", 31);
+    zxfimg_cpzx_video (2, (const uint8_t *) "\x00\x00\x00\x01\x01\x01\x00\x00\x02\x03\x03\x02\x00\x01\x00\x02\x02\x00\x02\x03\x02\x01\x02\x00\x02\x03\x01\x1e\x1c\x1e\x1c", 31);
 //    zxfimg_cpzx_video (2, (const uint8_t *) "\x83\x83\x04\x04\x00\x04\x00\x00\x02\x00\x00\x00\x00\x00\x85", 15);
 //    zxfimg_cpzx_video (3, (const uint8_t *) "\x00\x06\x00\x02\x06\x00\x83\x00\x84\x01\x87\x03\x86\x00\x84\x03\x01", 17);
 //    zxfimg_cpzx_video (4, (const uint8_t *) "\x81\x83\x04\x06\x02\x04\x00\x00\x81\x04\x02\x83\x06\x00\x02\x83\x04\x00\x27\x3e\x00\x3f\x3d\x16\x39\x2a\x26\x32", 28);
@@ -282,13 +286,13 @@ static bool zxsrv_respond_filemenu(const char *dirpath, int offset){
         create_mrespond_entry(entry_num+0x1c, zxsrv_respond_fileload,  entrypath, 0 );
 
         sprintf(txt_buf," [%X] %s %s",entry_num,entry->d_name,entrytype);
-        zxfimg_print_video(entry_num+6,txt_buf);
+        zxfimg_print_video(entry_num+5,txt_buf);
         entry_num++;
     }
-    zxfimg_print_video(20,wifi_stat_msg);
+    zxfimg_print_video(21,wifi_stat_msg);
 
-    sprintf(txt_buf,"--- VERSION: 0.05C ----");
-    zxfimg_print_video(22,txt_buf);
+    sprintf(txt_buf,"VER:0.03C");
+    zxfimg_print_video(23,txt_buf);
 
  
     create_mrespond_entry(55, zxsrv_respond_inpstr, "INP-QU", 0 ); // "R"
