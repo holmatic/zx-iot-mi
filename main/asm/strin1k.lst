@@ -182,86 +182,87 @@
 0182   4090 10 F8           djnz W1
 0183   4092 1E 4A           LD E, 74    ; ID for mstring reply
 0184   4094 CD 1F 03        call $031F  ; SAVE byte in E
-0185   4097 2A 10 40    	LD HL,(16400) ; VARS , start
-0186   409A             SLP:
-0187   409A 3A 14 40        LD A, (16404) ; E_LINE low byte
-0188   409D BD              CP L
-0189   409E 28 09           JR Z, S_END
-0190   40A0 5E              LD E, (HL)    ; ID for menu reply
-0191   40A1 E5              PUSH HL
-0192   40A2 CD 1F 03        call $031F  ; SAVE byte in E
-0193   40A5 E1              POP HL
-0194   40A6 23              INC HL
-0195   40A7 18 F1           JR SLP
-0196   40A9             S_END:
-0197   40A9             
-0198   40A9 1E 00           LD E, 0    ; send dummy as end
-0199   40AB CD 1F 03        call $031F ;
-0200   40AE                 ; /* reset stack pointer */
-0201   40AE 2A 02 40    	LD HL,(16386) ; ERR_SP
-0202   40B1 F9          	LD SP,HL
-0203   40B2 21 76 06        LD HL, $0676    ; return address in NEXT-LINE like when LOADING
-0204   40B5 E3          	EX (SP),HL
-0205   40B6             #if 1
-0206   40B6                 ; run from calculator area
-0207   40B6 21 3C 40        LD HL,PLOADER
-0208   40B9 11 C4 7F        LD DE,32708
-0209   40BC 01 20 00        LD BC,32
-0210   40BF ED B0           LDIR
-0211   40C1             
-0212   40C1 21 15 40    	LD HL,ELINEHI
-0213   40C4 34          	INC (HL) ; make sure no match during load
-0214   40C5 21 09 40    	LD HL,4009h	; start of BASIC area to load
-0215   40C8 C3 C4 7F        jp 32708
-0216   40CB~            #else
-0217   40CB~            	LD HL,ELINEHI
-0218   40CB~            	INC (HL) ; make sure no match during load
-0219   40CB~            	LD HL,4009h	; start of BASIC area to load
-0220   40CB~                jp PLOADER
-0221   40CB             #endif
-0222   40CB 76             db $76   ;N/L 
-0223   40CC             
-0224   40CC             line10:
-0225   40CC 00 0A          db 0,10  ;  line number 
-0226   40CE 04 00          dw line20-$-2  ;line length 
-0227   40D0 EE 26 0D 76    db 238,38,13,118   ;INPUT a$
-0228   40D4             
-0229   40D4             line20:
-0230   40D4 00 14          db 0,20  ;line number 
-0231   40D6 0B 00          dw dfile-$-2  ;line length 
-0232   40D8 F5             db $f5   ;PRINT 
-0233   40D9 D4             db $d4   ;USR 
-0234   40DA C5             db $c5   ;VAL
-0235   40DB 0B             db $0b   ;"
-0236   40DC 1D             db $1d   ;1 
-0237   40DD 22             db $22   ;6 
-0238   40DE 21             db $21   ;5 
-0239   40DF 1D             db $1d   ;1 
-0240   40E0 20             db $20   ;4 
-0241   40E1 0B             db $0b   ;"
-0242   40E2 76             db $76   ;N/L 
-0243   40E3             
+0185   4097                 ; result is in A$, just send the whole variables area as there will not be much more than a$
+0186   4097 2A 10 40    	LD HL,(16400) ; VARS , start
+0187   409A             SLP:
+0188   409A 3A 14 40        LD A, (16404) ; E_LINE low byte
+0189   409D BD              CP L
+0190   409E 28 09           JR Z, S_END
+0191   40A0 5E              LD E, (HL)    ; ID for menu reply
+0192   40A1 E5              PUSH HL
+0193   40A2 CD 1F 03        call $031F  ; SAVE byte in E
+0194   40A5 E1              POP HL
+0195   40A6 23              INC HL
+0196   40A7 18 F1           JR SLP
+0197   40A9             S_END:
+0198   40A9             
+0199   40A9 1E 00           LD E, 0    ; send dummy as end
+0200   40AB CD 1F 03        call $031F ;
+0201   40AE                 ; /* reset stack pointer */
+0202   40AE 2A 02 40    	LD HL,(16386) ; ERR_SP
+0203   40B1 F9          	LD SP,HL
+0204   40B2 21 76 06        LD HL, $0676    ; return address in NEXT-LINE like when LOADING
+0205   40B5 E3          	EX (SP),HL
+0206   40B6             #if 1
+0207   40B6                 ; run from calculator area
+0208   40B6 21 3C 40        LD HL,PLOADER
+0209   40B9 11 C4 7F        LD DE,32708
+0210   40BC 01 20 00        LD BC,32
+0211   40BF ED B0           LDIR
+0212   40C1             
+0213   40C1 21 15 40    	LD HL,ELINEHI
+0214   40C4 34          	INC (HL) ; make sure no match during load
+0215   40C5 21 09 40    	LD HL,4009h	; start of BASIC area to load
+0216   40C8 C3 C4 7F        jp 32708
+0217   40CB~            #else
+0218   40CB~            	LD HL,ELINEHI
+0219   40CB~            	INC (HL) ; make sure no match during load
+0220   40CB~            	LD HL,4009h	; start of BASIC area to load
+0221   40CB~                jp PLOADER
+0222   40CB             #endif
+0223   40CB 76             db $76   ;N/L 
+0224   40CC             
+0225   40CC             line10:
+0226   40CC 00 0A          db 0,10  ;  line number 
+0227   40CE 04 00          dw line20-$-2  ;line length 
+0228   40D0 EE 26 0D 76    db 238,38,13,118   ;INPUT a$
+0229   40D4             
+0230   40D4             line20:
+0231   40D4 00 14          db 0,20  ;line number 
+0232   40D6 0B 00          dw dfile-$-2  ;line length 
+0233   40D8 F5             db $f5   ;PRINT 
+0234   40D9 D4             db $d4   ;USR 
+0235   40DA C5             db $c5   ;VAL
+0236   40DB 0B             db $0b   ;"
+0237   40DC 1D             db $1d   ;1 
+0238   40DD 22             db $22   ;6 
+0239   40DE 21             db $21   ;5 
+0240   40DF 1D             db $1d   ;1 
+0241   40E0 20             db $20   ;4 
+0242   40E1 0B             db $0b   ;"
+0243   40E2 76             db $76   ;N/L 
 0244   40E3             
-0245   40E3                
-0246   40E3             ;- Display file -------------------------------------------- 
-0247   40E3              
-0248   40E3             dfile: 
-0249   40E3 76             db $76 
-0250   40E4 76 76 76 76    db $76,$76,$76,$76,$76,$76,$76,$76 
-0250   40E8 76 76 76 76 
-0251   40EC 76 76 76 76    db $76,$76,$76,$76,$76,$76,$76,$76 
-0251   40F0 76 76 76 76 
-0252   40F4 76 76 76 76    db $76,$76,$76,$76,$76,$76,$76,$76 
-0252   40F8 76 76 76 76 
-0253   40FC              
-0254   40FC             ;- BASIC-Variables ---------------------------------------- 
-0255   40FC              
-0256   40FC             var: 
-0257   40FC 80             db $80 
-0258   40FD              
-0259   40FD             ;- End of program area ---------------------------- 
-0260   40FD             
-0261   40FD             last: 
-0262   40FD              
-0263   40FD                end 
+0245   40E3             
+0246   40E3                
+0247   40E3             ;- Display file -------------------------------------------- 
+0248   40E3              
+0249   40E3             dfile: 
+0250   40E3 76             db $76 
+0251   40E4 76 76 76 76    db $76,$76,$76,$76,$76,$76,$76,$76 
+0251   40E8 76 76 76 76 
+0252   40EC 76 76 76 76    db $76,$76,$76,$76,$76,$76,$76,$76 
+0252   40F0 76 76 76 76 
+0253   40F4 76 76 76 76    db $76,$76,$76,$76,$76,$76,$76,$76 
+0253   40F8 76 76 76 76 
+0254   40FC              
+0255   40FC             ;- BASIC-Variables ---------------------------------------- 
+0256   40FC              
+0257   40FC             var: 
+0258   40FC 80             db $80 
+0259   40FD              
+0260   40FD             ;- End of program area ---------------------------- 
+0261   40FD             
+0262   40FD             last: 
+0263   40FD              
+0264   40FD                end 
 tasm: Number of errors = 0

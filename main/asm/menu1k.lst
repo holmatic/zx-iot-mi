@@ -197,7 +197,7 @@
 0197   40A1                 ; /* reset stack pointer */
 0198   40A1 2A 02 40    	LD HL,(16386) ; ERR_SP
 0199   40A4 F9          	LD SP,HL
-0200   40A5 21 76 06        LD HL, 0676H    ; return address in NEXT-LINE like when LOADING
+0200   40A5 21 76 06        LD HL, $0676    ; return address in NEXT-LINE like when LOADING
 0201   40A8 E3          	EX (SP),HL
 0202   40A9             #if 1
 0203   40A9                 ; run from calculator area

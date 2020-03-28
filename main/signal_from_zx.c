@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <string.h>
+#include "esp_idf_version.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_spi_flash.h"
@@ -124,7 +125,11 @@ void sfzx_init()
 
 static inline uint16_t get_sample(void* samplebuf, uint32_t ix)
 {
-    return 4096-((uint16_t*)samplebuf)[ix^1];
+#if (ESP_IDF_VERSION_MAJOR>=4)
+    return ((uint16_t*)samplebuf)[ix^1];
+#else
+    return 4095-((uint16_t*)samplebuf)[ix^1]; // early versions returned inverted data of ADC via I2S
+#endif
 }
 
 
