@@ -11,6 +11,7 @@ Works asynchroously, thus communication is done via queues
 #include <string.h>
 #include <ctype.h>
 #include <dirent.h>
+#include <stdlib.h>
 #include <sys/stat.h>
 #include <sys/unistd.h>
 #include "freertos/FreeRTOS.h"
@@ -29,6 +30,8 @@ Works asynchroously, thus communication is done via queues
 
 static const char *TAG = "zx_srv_dlg";
 
+
+extern char wifi_stat_msg[];
 
 
 
@@ -49,7 +52,7 @@ typedef struct {
     int func_arg_i;  
 } zxsrv_menu_response_entry;
 
-static zxsrv_menu_response_entry menu_response[20];
+static zxsrv_menu_response_entry menu_response[24];
 
 static uint8_t menu_resp_size=0;
 //static char curr_dir[];
@@ -62,8 +65,8 @@ static bool zxsrv_respond_filemenu(const char *dirpath, int); // fwd declare
 static bool zxsrv_respond_fileload(const char *filepath, int dummy);
 static bool zxsrv_respond_inpstr(const char *question, int offset);
 static bool zxsrv_respond_wifiscan(const char *dirpath, int offset);
-
-
+static bool zxsrv_system(const char *dirpath, int offset);
+static bool zxsrv_help(const char *dirpath, int offset);
 
 
 
@@ -183,7 +186,72 @@ static bool zxsrv_wifi_inp_pass(const char *wifi_name, int offset){
 }
 
 
- 
+static bool zxsrv_help(const char *wifi_name, int offset){
+
+    zxfimg_create(ZXFI_MENU_KEY);
+
+    zxfimg_cpzx_video (0, (const uint8_t *) "\x1c\x34\x04\x05\x05\x05\x04\x00", 8);
+    zxfimg_cpzx_video (1, (const uint8_t *) "\x03\x89\x05\x05\x05\x05\x05\x01", 8);
+    zxfimg_cpzx_video (2, (const uint8_t *) "\x00\x00\x00\x01\x01\x01\x00\x00", 8);
+
+    sprintf(txt_buf,"       ##[ ZX-WESPI HELP ]##");
+    zxfimg_print_video(3,txt_buf);
+
+    sprintf(txt_buf,"- LOAD AND SAVE ZX PROGRAM FILES");
+    zxfimg_print_video(6,txt_buf);
+    sprintf(txt_buf,"  VIA STANDARD BASIC COMMANDS:");
+    zxfimg_print_video(7,txt_buf);
+    sprintf(txt_buf,"  USE [LOAD \"\"] AND FOLLOW MENU");
+    zxfimg_print_video(9,txt_buf);
+    sprintf(txt_buf,"  USE [SAVE \"ANYNAME\"] TO STORE");
+    zxfimg_print_video(11,txt_buf);
+
+    sprintf(txt_buf,"- ACCESS THE FILES VIA BROWSER:");
+    zxfimg_print_video(13,txt_buf);
+    sprintf(txt_buf,"  WESPI ACTS AS WIFI HTTP SERVER");
+    zxfimg_print_video(14,txt_buf);
+    sprintf(txt_buf,"  JUST LOOK UP IP ADDRESS:");
+    zxfimg_print_video(15,txt_buf);
+    zxfimg_print_video(17,wifi_stat_msg);
+
+    clear_mrespond_entries();
+    create_mrespond_entry(60, zxsrv_respond_wifiscan, "WIFI", 0 ); // "W"
+    /* append default entry */
+    create_mrespond_entry(0, zxsrv_respond_filemenu, "/spiffs/", 0 );
+    return true; // to send_zxf_image_compr();zxfimg_delete();
+}
+
+
+static bool zxsrv_system(const char *wifi_name, int offset){
+
+    zxfimg_create(ZXFI_MENU_KEY);
+
+    zxfimg_cpzx_video (0, (const uint8_t *) "\x1c\x34\x04\x05\x05\x05\x04\x00", 8);
+    zxfimg_cpzx_video (1, (const uint8_t *) "\x03\x89\x05\x05\x05\x05\x05\x01", 8);
+    zxfimg_cpzx_video (2, (const uint8_t *) "\x00\x00\x00\x01\x01\x01\x00\x00", 8);
+
+    sprintf(txt_buf,"    [ ZX-WESPI SYSTEM ] ");
+    zxfimg_print_video(4,txt_buf);
+
+    sprintf(txt_buf,"- LOAD AND SAVE ZX PROGRAM FILES");
+    zxfimg_print_video(6,txt_buf);
+    sprintf(txt_buf,"  VIA STANDARD BASIC COMMANDS.");
+    zxfimg_print_video(7,txt_buf);
+    sprintf(txt_buf,"  USE [LOAD \"\"] AND FOLLOW MENU");
+    zxfimg_print_video(9,txt_buf);
+
+    sprintf(txt_buf,"- ACCESS THE FILES VIA BROWSER:");
+    zxfimg_print_video(10,txt_buf);
+    sprintf(txt_buf,"  WESPI ACTS AS WIFI HTTP SERVER");
+    zxfimg_print_video(11,txt_buf);
+
+    clear_mrespond_entries();
+    /* append default entry */
+    create_mrespond_entry(0, zxsrv_respond_filemenu, "/spiffs/", 0 );
+    return true; // to send_zxf_image_compr();zxfimg_delete();
+}
+
+
 
 static bool zxsrv_respond_wifiscan(const char *dirpath, int offset){
 
@@ -232,7 +300,7 @@ static bool zxsrv_respond_wifiscan(const char *dirpath, int offset){
 }
 
 
-extern char wifi_stat_msg[];
+#define MAX_FILEENTRY_LINES 15
 
 static bool zxsrv_respond_filemenu(const char *dirpath, int offset){
 
@@ -241,13 +309,14 @@ static bool zxsrv_respond_filemenu(const char *dirpath, int offset){
     char entrysize[16];
     const char *entrytype;
     uint8_t entry_num=0;
+    uint8_t disp_line=0;
+    uint16_t num_entries=0;
     struct dirent *entry;
     struct stat entry_stat;
     DIR *dir = opendir(dirpath);
     const size_t dirpath_len = strlen(dirpath);
 
-
-    ESP_LOGI(TAG, "FILEMENU : %s", dirpath);
+    ESP_LOGI(TAG, "FILEMENU1 : %s offs %d ", dirpath, offset);
     /* Retrieve the base path of file storage to construct the full path */
     strlcpy(entrypath, dirpath, sizeof(entrypath));
 
@@ -257,6 +326,23 @@ static bool zxsrv_respond_filemenu(const char *dirpath, int offset){
     //    httpd_resp_send_err(req, HTTPD_404_NOT_FOUND, "Directory does not exist");
         return false;
     }
+    // count the overall number of entries first
+    num_entries=0;
+    while ((entry = readdir(dir)) != NULL) num_entries++;
+    closedir(dir);
+
+    // create next/prev entries while we still have the valid dirpath
+//    ESP_LOGI(TAG, "FILEMENU : num_entries %d offs %d ", num_entries, offset);
+    clear_mrespond_entries();
+    if(offset){
+    	create_mrespond_entry(53, zxsrv_respond_filemenu, dirpath, offset>(MAX_FILEENTRY_LINES-1) ? offset-(MAX_FILEENTRY_LINES) : 0 ); // "P"
+    }
+    if(num_entries>15){
+    	create_mrespond_entry(51, zxsrv_respond_filemenu, dirpath, offset+(MAX_FILEENTRY_LINES-1)<num_entries-4 ? offset+(MAX_FILEENTRY_LINES-1) : num_entries-4    ) ;  // "N"
+    }
+
+    dir = opendir(dirpath);
+
     zxfimg_create(ZXFI_MENU_KEY);
  //  closedir(dir);
  //  return true;
@@ -266,35 +352,47 @@ static bool zxsrv_respond_filemenu(const char *dirpath, int offset){
     zxfimg_cpzx_video (0, (const uint8_t *) "\x1c\x34\x04\x05\x05\x05\x04\x00\x00\x83\x04\x87\x87\x01\x00\x06\x00\x04\x06\x01\x06\x03\x87\x03\x04\x02\x00\x27\x3e\x3f\x3d", 31);
     zxfimg_cpzx_video (1, (const uint8_t *) "\x03\x89\x05\x05\x05\x05\x05\x01\x00\x06\x00\x87\x86\x02\x01\x05\x05\x05\x07\x01\x02\x86\x85\x03\x00\x84\x00\x39\x2a\x26\x32", 31);
     zxfimg_cpzx_video (2, (const uint8_t *) "\x00\x00\x00\x01\x01\x01\x00\x00\x02\x03\x03\x02\x00\x01\x00\x02\x02\x00\x02\x03\x02\x01\x02\x00\x02\x03\x01\x1e\x1c\x1e\x1c", 31);
-//    zxfimg_cpzx_video (2, (const uint8_t *) "\x83\x83\x04\x04\x00\x04\x00\x00\x02\x00\x00\x00\x00\x00\x85", 15);
-//    zxfimg_cpzx_video (3, (const uint8_t *) "\x00\x06\x00\x02\x06\x00\x83\x00\x84\x01\x87\x03\x86\x00\x84\x03\x01", 17);
-//    zxfimg_cpzx_video (4, (const uint8_t *) "\x81\x83\x04\x06\x02\x04\x00\x00\x81\x04\x02\x83\x06\x00\x02\x83\x04\x00\x27\x3e\x00\x3f\x3d\x16\x39\x2a\x26\x32", 28);
 
-    clear_mrespond_entries();
+
     /* Iterate over all files / folders and fetch their names and sizes */
-    while ((entry = readdir(dir)) != NULL && entry_num<16) {
-        entrytype = (entry->d_type == DT_DIR ? "(DIR)" : "");
+    disp_line=0;
+    while ((entry = readdir(dir)) != NULL && disp_line<MAX_FILEENTRY_LINES) {
+    	if (entry_num>=offset){
+			entrytype = (entry->d_type == DT_DIR ? "(DIR)" : "");
 
-        strlcpy(entrypath + dirpath_len, entry->d_name, sizeof(entrypath) - dirpath_len);
-        if (stat(entrypath, &entry_stat) == -1) {
-            ESP_LOGE(TAG, "Failed to stat %s : %s", entrytype, entry->d_name);
-            continue;
-        }
-        snprintf(entrysize,16, "%ld", entry_stat.st_size);
-        ESP_LOGI(TAG, "Found %s : %s (%s bytes)", entrytype, entry->d_name , entrysize);
-        create_mrespond_entry(entry_num+0x1c, zxsrv_respond_fileload,  entrypath, 0 );
+			strlcpy(entrypath + dirpath_len, entry->d_name, sizeof(entrypath) - dirpath_len);
+			if (stat(entrypath, &entry_stat) == -1) {
+				ESP_LOGE(TAG, "Failed to stat %s : %s", entrytype, entry->d_name);
+				continue;
+			}
+			snprintf(entrysize,16, "%ld", entry_stat.st_size);
+			ESP_LOGI(TAG, "Found %s : %s (%s bytes)", entrytype, entry->d_name , entrysize);
+			create_mrespond_entry(disp_line+0x1c, zxsrv_respond_fileload,  entrypath, 0 );
 
-        snprintf(txt_buf,32," [%X] %.16s %.5s",entry_num,entry->d_name,entrytype);
-        zxfimg_print_video(entry_num+5,txt_buf);
+			snprintf(txt_buf,32," [%X] %.16s %.5s",disp_line,entry->d_name,entrytype);
+			zxfimg_print_video(disp_line+5,txt_buf);
+			disp_line++;
+    	}
         entry_num++;
     }
-    zxfimg_print_video(21,wifi_stat_msg);
+    // NOTE: dirpath area has been overritten by the new entries, so do not use
 
-    sprintf(txt_buf,"VER:0.03D %s",IDF_VER);
-    zxfimg_print_video(23,txt_buf);
+    if(num_entries==0){
+        sprintf(txt_buf," USE [SAVE] FROM ZX OR UPLOAD");
+        zxfimg_print_video(8,txt_buf);
+        sprintf(txt_buf," VIA WIFI TO ADD FILES HERE");
+        zxfimg_print_video(10,txt_buf);
+    }
 
- 
-    create_mrespond_entry(55, zxsrv_respond_inpstr, "INP-QU", 0 ); // "R"
+    zxfimg_print_video(23,wifi_stat_msg);
+
+    //sprintf(txt_buf,"VER:0.04B %s",IDF_VER);
+    snprintf(txt_buf,32,"%s %s    [S]YS  [H]ELP",entry!=NULL?"[N]EXT":"    ",offset?"[P]REV":"    ");
+    zxfimg_print_video(21,txt_buf);
+
+  // create_mrespond_entry(55, zxsrv_respond_inpstr, "INP-QU", 0 ); // "R"
+    create_mrespond_entry(56, zxsrv_system, "INP-QU", 0 ); // "S"
+    create_mrespond_entry(45, zxsrv_help, "HELP", 0 ); // "H"
     create_mrespond_entry(60, zxsrv_respond_wifiscan, "WIFI", 0 ); // "W"
     /* append default entry */
     create_mrespond_entry(0, zxsrv_respond_filemenu, "/spiffs/", 0 );

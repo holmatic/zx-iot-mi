@@ -62,7 +62,7 @@ static esp_err_t event_handler(void *ctx, system_event_t *event)
         ESP_LOGI(TAG, "SYSTEM_EVENT_STA_GOT_IP");
         ESP_LOGI(TAG, "Got IP: '%s'",
                 ip4addr_ntoa(&event->event_info.got_ip.ip_info.ip));
-        sprintf(wifi_stat_msg,"[ WIFI ] IP=%s",ip4addr_ntoa(&event->event_info.got_ip.ip_info.ip));        
+        sprintf(wifi_stat_msg,"[WIFI] HTTP://%s",ip4addr_ntoa(&event->event_info.got_ip.ip_info.ip));
         //sprintf(wifi_stat_msg,"WIFI  :-)");        
         wifi_connect_retry=0;
         break;
