@@ -131,14 +131,45 @@ static bool zxsrv_respond_fileload(const char *filepath, int dummy){
     return true; // to send_zxf_image_compr();zxfimg_delete();
 }
 
+// makes a number from two ascii hexa characters
+static int ahex2int(char a, char b){
+
+    a = (a <= '9') ? a - '0' : (a & 0x7) + 9;
+    b = (b <= '9') ? b - '0' : (b & 0x7) + 9;
+
+    return (a << 4) + b;
+}
 
 static bool zxsrv_retrieve_wlanpasswd(const char *inp, int len){
     nvs_handle my_handle;
-
+    size_t slen;
+    int i,c,wi;
+    bool is_hex;
     char pwbuf[FILFB_SIZE];
     ESP_LOGI(TAG, "zxsrv_retrieve_wlanpasswd:");
  
     zx_string_to_ascii((uint8_t*)inp,len,pwbuf);
+    slen=strlen(pwbuf);
+
+    // due to the limited charset of ZX, password can also be entered as hex string with leading $
+    if(pwbuf[0]=='$' && slen>=3 && (slen&1) ){  // format $414243 with even number of digits
+        is_hex=true;
+        for (i=1; i<slen; i++){
+            if (!isxdigit(pwbuf[i])) {is_hex=false;break;}
+        }
+        if (is_hex){
+            ESP_LOGI(TAG, "Convert from HEX : %s", pwbuf);
+            wi=0;
+            for (i=1; i<len; i+=2){
+                //  int strtol(const char *str, char **endptr, int base) needs end mark, so use simpe
+                c=ahex2int(pwbuf[i],pwbuf[i+1]);
+                ESP_LOGI(TAG, "Convert : %02x", c);                
+                pwbuf[wi++] = c;
+            }
+            pwbuf[wi]=0;
+        }
+    }
+
     ESP_LOGI(TAG, "WLANPASSWD : %s", pwbuf);
     ESP_ERROR_CHECK( nvs_open("zxstorage", NVS_READWRITE, &my_handle) );
     ESP_ERROR_CHECK( nvs_set_str(my_handle, "WIFI_p", pwbuf) );

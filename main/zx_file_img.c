@@ -114,7 +114,7 @@ static uint16_t mem_img_size(){
 	return memimg[16404-img_offs]+256*memimg[16404+1-img_offs] - img_offs;
 }
 
-static void mem_insert(uint8_t* src, uint16_t insert_pos, uint16_t ins_size){
+static void mem_insert(const uint8_t* src, uint16_t insert_pos, uint16_t ins_size){
 	uint16_t v,p,old_sz;
 	old_sz=mem_img_size();
 	// update pointers
@@ -152,6 +152,7 @@ void zxfimg_print_video(uint8_t linenum, const char* asciitxt) {
 
 // call once at startup
 void zxfimg_create(zxfimg_prog_t prog_type) {
+	ESP_LOGI(TAG,"zxfimg_create %d \n",prog_type); 
 	uint16_t i,sz;
     const uint8_t *src= base_img[prog_type];
 	if(!memimg) memimg=calloc(16384,1);
