@@ -36,7 +36,7 @@ extern char wifi_stat_msg[];
 
 
 
-static char txt_buf[33];
+static char txt_buf[35]; // linewidth plus []-options
 
 #define FILFB_SIZE 32
 #define FILENAME_SIZE 24
@@ -201,9 +201,27 @@ static bool zxsrv_wifi_inp_pass(const char *wifi_name, int offset){
     nvs_handle my_handle;
 
     zxfimg_create(ZXFI_STR_INP);
-    sprintf(txt_buf,"[ ENTER PASSWORD ] for ");
+    sprintf(txt_buf,"   #[ ENTER WIFI PASSWORD ]# ");
     zxfimg_print_video(1,txt_buf);
-    zxfimg_print_video(3,wifi_name);
+    sprintf(txt_buf,"- FOR ACCESS POINT");
+    zxfimg_print_video(3,txt_buf);
+    zxfimg_print_video(5,wifi_name);
+
+    sprintf(txt_buf,"USE INVERSE FOR LOWER CASE");
+    zxfimg_print_video(9,txt_buf);
+    sprintf(txt_buf,"EXAMPLE:");
+    zxfimg_print_video(10,txt_buf);
+    sprintf(txt_buf,"  \"H[ELLO]\"");
+    zxfimg_print_video(12,txt_buf);
+
+    sprintf(txt_buf,"HEX INPUT OPTION:");
+    zxfimg_print_video(15,txt_buf);
+    sprintf(txt_buf,"TYPE ASCII CODES AS $HEX");
+    zxfimg_print_video(16,txt_buf);
+    sprintf(txt_buf,"EXAMPLE:");
+    zxfimg_print_video(17,txt_buf);
+    sprintf(txt_buf,"  \"$48656c6c6f\"");
+    zxfimg_print_video(19,txt_buf);
 
     ESP_ERROR_CHECK( nvs_open("zxstorage", NVS_READWRITE, &my_handle) );
     ESP_ERROR_CHECK( nvs_set_str(my_handle, "WIFI_n", wifi_name) );
@@ -324,6 +342,10 @@ static bool zxsrv_respond_wifiscan(const char *dirpath, int offset){
         zxfimg_print_video(st+5,txt_buf);
     }
     free(ap_list);
+    sprintf(txt_buf,"SELECT ACCESS POINT OR E[X]IT");
+    zxfimg_print_video(22,txt_buf);
+
+
     /* append default entry */
     create_mrespond_entry(55, zxsrv_respond_inpstr, "INP-QU", 0 ); // "R"
     create_mrespond_entry(0, zxsrv_respond_filemenu, "/spiffs/", 0 );
