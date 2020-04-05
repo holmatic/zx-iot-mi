@@ -20,6 +20,7 @@
 #include "esp_err.h"
 #include "esp_log.h"
 
+#include "esp_idf_version.h"
 #include "esp_vfs.h"
 #include "esp_spiffs.h"
 #include "esp_http_server.h"
@@ -158,6 +159,17 @@ static esp_err_t http_resp_dir_html(httpd_req_t *req, const char *dirpath)
 
     /* Finish the file list table */
     httpd_resp_sendstr_chunk(req, "</tbody></table>");
+
+    /* Add status line */
+
+    httpd_resp_sendstr_chunk(req, "<p>by members of ZX-TEAM 2020. Version ");
+    httpd_resp_sendstr_chunk(req,esp_ota_get_app_description()->version);
+    httpd_resp_sendstr_chunk(req, "-");
+    httpd_resp_sendstr_chunk(req,esp_ota_get_app_description()->date);
+    httpd_resp_sendstr_chunk(req, " (ESP-IDF ");
+    httpd_resp_sendstr_chunk(req,esp_ota_get_app_description()->idf_ver);
+    httpd_resp_sendstr_chunk(req, ") </p>");
+
 
     /* Send remaining chunk of HTML file to complete it */
     httpd_resp_sendstr_chunk(req, "</body></html>");

@@ -1,7 +1,7 @@
 <table class="fixed" border="0">
     <col width="1000px" /><col width="500px" />
     <tr><td>
-        <h2>ZX-IOT File Server</h2>
+        <h2>ZX-Wespi File Server</h2>
     </td><td>
         <table border="0">
             <tr>
@@ -55,6 +55,7 @@ function upload() {
         document.getElementById("newfile").disabled = true;
         document.getElementById("filepath").disabled = true;
         document.getElementById("upload").disabled = true;
+        document.getElementById("upload").innerHTML = "Uploading..."
 
         var file = fileInput[0];
         var xhttp = new XMLHttpRequest();
