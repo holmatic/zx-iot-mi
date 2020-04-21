@@ -167,7 +167,7 @@ static void zxsrv_task(void *arg)
 void zxsrv_init()
 {
     msg_queue=xQueueCreate(50,sizeof( zxserv_event_t ) );
-    xTaskCreate(zxsrv_task, "zxsrv_task", 1024 * 3, NULL, 8, NULL);
+    xTaskCreate(zxsrv_task, "zxsrv_task", 1024 * 4, NULL, 8, NULL);
 }
 
 

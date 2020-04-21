@@ -17,6 +17,7 @@ Works asynchroously, thus communication is done via queues
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/queue.h"
+#include "esp_ota_ops.h"
 #include "esp_err.h"
 #include "esp_log.h"
 #include "esp_vfs.h"
@@ -26,17 +27,14 @@ Works asynchroously, thus communication is done via queues
 #include "zx_file_img.h"
 #include "signal_to_zx.h"
 #include "zx_server.h"
+#include "wifi_sta.h"
 #include "zx_serv_dialog.h"
 
 static const char *TAG = "zx_srv_dlg";
 
 
-extern char wifi_stat_msg[];
 
-
-
-
-static char txt_buf[35]; // linewidth plus []-options
+static char txt_buf[85]; // linewidth plus []-options
 
 #define FILFB_SIZE 32
 #define FILENAME_SIZE 24
@@ -141,7 +139,6 @@ static int ahex2int(char a, char b){
 }
 
 static bool zxsrv_retrieve_wlanpasswd(const char *inp, int len){
-    nvs_handle my_handle;
     size_t slen;
     int i,c,wi;
     bool is_hex;
@@ -171,12 +168,16 @@ static bool zxsrv_retrieve_wlanpasswd(const char *inp, int len){
     }
 
     ESP_LOGI(TAG, "WLANPASSWD : %s", pwbuf);
-    ESP_ERROR_CHECK( nvs_open("zxstorage", NVS_READWRITE, &my_handle) );
-    ESP_ERROR_CHECK( nvs_set_str(my_handle, "WIFI_p", pwbuf) );
-    ESP_ERROR_CHECK( nvs_commit(my_handle) ); 
-    nvs_close(my_handle);
 
-    return zxsrv_respond_filemenu("/spiffs/", 0);    
+    wifi_sta_reconfig(NULL, pwbuf, true); /* reconnect */
+
+    for(i=0;i<60;i++){
+        vTaskDelay(100 / portTICK_PERIOD_MS);
+        if(wifi_sta_is_connected()) return zxsrv_respond_filemenu("/spiffs/", 0);
+    }
+    ESP_LOGI(TAG, "no connect detected");
+    /* not conected, offer retry */
+    return zxsrv_respond_wifiscan("WIFI", 0);
 }
 
 
@@ -198,7 +199,6 @@ static bool zxsrv_respond_inpstr(const char *question, int offset){
 
 static bool zxsrv_wifi_inp_pass(const char *wifi_name, int offset){
 
-    nvs_handle my_handle;
 
     zxfimg_create(ZXFI_STR_INP);
     sprintf(txt_buf,"   #[ ENTER WIFI PASSWORD ]# ");
@@ -223,10 +223,8 @@ static bool zxsrv_wifi_inp_pass(const char *wifi_name, int offset){
     sprintf(txt_buf,"  \"$48656c6c6f\"");
     zxfimg_print_video(19,txt_buf);
 
-    ESP_ERROR_CHECK( nvs_open("zxstorage", NVS_READWRITE, &my_handle) );
-    ESP_ERROR_CHECK( nvs_set_str(my_handle, "WIFI_n", wifi_name) );
-    ESP_ERROR_CHECK( nvs_commit(my_handle) ); 
-    nvs_close(my_handle);
+    wifi_sta_reconfig(wifi_name, NULL, false);
+
 
     clear_mrespond_entries();
     /* append default entry */
@@ -261,7 +259,7 @@ static bool zxsrv_help(const char *wifi_name, int offset){
     zxfimg_print_video(14,txt_buf);
     sprintf(txt_buf,"  JUST LOOK UP IP ADDRESS:");
     zxfimg_print_video(15,txt_buf);
-    zxfimg_print_video(17,wifi_stat_msg);
+    zxfimg_print_video(17,wifi_get_status_msg());
 
     clear_mrespond_entries();
     create_mrespond_entry(60, zxsrv_respond_wifiscan, "WIFI", 0 ); // "W"
@@ -279,22 +277,20 @@ static bool zxsrv_system(const char *wifi_name, int offset){
     zxfimg_cpzx_video (1, (const uint8_t *) "\x03\x89\x05\x05\x05\x05\x05\x01", 8);
     zxfimg_cpzx_video (2, (const uint8_t *) "\x00\x00\x00\x01\x01\x01\x00\x00", 8);
 
-    sprintf(txt_buf,"    [ ZX-WESPI SYSTEM ] ");
+    sprintf(txt_buf," ##[ ZX-WESPI SYSTEM CONFIG ]##");
     zxfimg_print_video(4,txt_buf);
 
-    sprintf(txt_buf,"- LOAD AND SAVE ZX PROGRAM FILES");
-    zxfimg_print_video(6,txt_buf);
-    sprintf(txt_buf,"  VIA STANDARD BASIC COMMANDS.");
+    sprintf(txt_buf,"[S] KEEP SILENCE TO LOAD TAPE");
     zxfimg_print_video(7,txt_buf);
-    sprintf(txt_buf,"  USE [LOAD \"\"] AND FOLLOW MENU");
+
+    sprintf(txt_buf,"[W] WIFI CONFIG");
     zxfimg_print_video(9,txt_buf);
 
-    sprintf(txt_buf,"- ACCESS THE FILES VIA BROWSER:");
-    zxfimg_print_video(10,txt_buf);
-    sprintf(txt_buf,"  WESPI ACTS AS WIFI HTTP SERVER");
-    zxfimg_print_video(11,txt_buf);
+    sprintf(txt_buf,"VERSION %s-%s",esp_ota_get_app_description()->version,esp_ota_get_app_description()->date);
+    zxfimg_print_video(20,txt_buf);
 
     clear_mrespond_entries();
+    create_mrespond_entry(60, zxsrv_respond_wifiscan, "WIFI", 0 ); // "W"
     /* append default entry */
     create_mrespond_entry(0, zxsrv_respond_filemenu, "/spiffs/", 0 );
     return true; // to send_zxf_image_compr();zxfimg_delete();
@@ -316,6 +312,7 @@ static bool zxsrv_respond_wifiscan(const char *dirpath, int offset){
     };
 
     ESP_LOGI(TAG, "WIFI SCAN ...");
+    wifi_sta_allow_for_AP_scan();
     while (  ESP_OK != esp_wifi_scan_start(&scanConf, true) )  {
         ESP_LOGI(TAG, "  SCAN failed, retry...");
         vTaskDelay(133 / portTICK_PERIOD_MS);    
@@ -437,7 +434,7 @@ static bool zxsrv_respond_filemenu(const char *dirpath, int offset){
         zxfimg_print_video(10,txt_buf);
     }
 
-    zxfimg_print_video(23,wifi_stat_msg);
+    zxfimg_print_video(23,wifi_get_status_msg());
 
     //sprintf(txt_buf,"VER:0.04B %s",IDF_VER);
     snprintf(txt_buf,32,"%s %s    [S]YS  [H]ELP",entry!=NULL?"[N]EXT":"    ",offset?"[P]REV":"    ");
