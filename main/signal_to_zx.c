@@ -80,10 +80,16 @@ void stzx_init()
     xTaskCreate(stzx_task, "stzx_task", 1024 * 3, NULL, 9, NULL);
 }
 
+static uint8_t outlevel_inv=0;
+
+void stzx_set_out_inv_level(bool inv)
+{
+	outlevel_inv = inv ? 0xff : 0;
+}
 
 static inline void set_sample(uint8_t* samplebuf, uint32_t ix, uint8_t val)
 {
-    samplebuf[ix^0x0003]=val;//0xff;// val; // convert for endian
+    samplebuf[ix^0x0003]=val ^ outlevel_inv;  // convert for endian byteorder
 }
 
 

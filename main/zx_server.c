@@ -19,6 +19,7 @@ Works asynchroously, thus communication is done via queues
 #include "esp_err.h"
 #include "esp_log.h"
 #include "esp_vfs.h"
+#include "nvs.h"
 #include "zx_serv_dialog.h"
 #include "zx_server.h"
 #include "zx_file_img.h"
@@ -93,16 +94,53 @@ static void save_received_zxfimg(){
     ESP_LOGI(TAG,"SAVE - done\n");
 }
 
+
+
+
+static bool get_zx_outlevel_inverted()
+{
+    esp_err_t err;
+    uint8_t val=0;
+    nvs_handle my_handle;
+    ESP_ERROR_CHECK( nvs_open("zxstorage", NVS_READWRITE, &my_handle) );
+    // Read
+    err = nvs_get_u8(my_handle, "OUTLEVEL_INV", &val);
+    if (err!=ESP_OK && err!=ESP_ERR_NVS_NOT_FOUND){
+        ESP_ERROR_CHECK( err );
+    }
+    nvs_close(my_handle);
+    return val!=0;
+}
+
+static void set_zx_outlevel_inverted(bool newval)
+{
+    nvs_handle my_handle;
+    if(get_zx_outlevel_inverted() != newval) {
+        ESP_ERROR_CHECK( nvs_open("zxstorage", NVS_READWRITE, &my_handle) );
+        ESP_ERROR_CHECK( nvs_set_u8(my_handle, "OUTLEVEL_INV", newval ? 1 : 0 ) );
+        ESP_ERROR_CHECK( nvs_commit(my_handle) ); 
+        nvs_close(my_handle);
+    }
+}
+
+
+#define EVT_TIMEOUT_MS 50
+#define COMPRLOAD_TIMEOUT_MS 2000  /* usually returns after 500ms*/
+
+
 static void zxsrv_task(void *arg)
 {
+    uint16_t watchdog_cnt=0;    
     zxserv_event_t evt;
     ESP_LOGI(TAG,"sfzx_task START \n");
+    stzx_set_out_inv_level( get_zx_outlevel_inverted()  );  /* different ULA flavors need different levels - TODO bring to NVS */
     while(true){
-		if(pdTRUE ==  xQueueReceive( msg_queue, &evt, 10 / portTICK_RATE_MS ) ) {
+		if(pdTRUE ==  xQueueReceive( msg_queue, &evt, EVT_TIMEOUT_MS / portTICK_RATE_MS ) ) {
 			//ESP_LOGI(TAG,"Retrieved evt %d",evt.evt_type);
             if(evt.evt_type==ZXSG_HIGH){
                 // Load
                 send_zxf_loader_uncompressed();
+                if (watchdog_cnt==0) watchdog_cnt=1;
                 // next - main menu
                 zxdlg_reset();
             }else if(evt.evt_type==ZXSG_FILE_DATA){
@@ -132,14 +170,16 @@ static void zxsrv_task(void *arg)
                     if(evt.addr==1){
                         if(file_first_bytes[0]==ZX_SAVE_TAG_LOADER_RESPONSE){
                             // send compressed second stage
-                            ESP_LOGI(TAG,"Response from %dk ZX, send 2nd (compressed) stage \n",(evt.data-0x40)/4 );                        
+                            ESP_LOGI(TAG,"Response from %dk ZX, send 2nd (compressed) stage %d\n",(evt.data-0x40)/4,watchdog_cnt );                        
                             if (zxdlg_respond_from_key(0)){
                                 send_zxf_image_compr();
+                                if (watchdog_cnt==1) watchdog_cnt=2; /* watchdog armed, we need to check if the compressed loader loads successfully */
                                 zxfimg_delete();
                             }
                         } else if(file_first_bytes[0]==ZX_SAVE_TAG_MENU_RESPONSE){
-                            // send compressed second stage
+                            // send key rsponse etc
                             ESP_LOGI(TAG,"MENU RESPONSE KEYPRESS code %02X \n",evt.data); 
+                            watchdog_cnt=0;
                             if (zxdlg_respond_from_key(evt.data)){
                                 send_zxf_image_compr();
                                 zxfimg_delete();
@@ -156,10 +196,28 @@ static void zxsrv_task(void *arg)
                         zxdlg_reset();
                     }
                 }
-			}
-			else ESP_LOGW(TAG,"Unexpected evt %d",evt.evt_type);
-		}
+			} else if (evt.evt_type==ZXSG_SLOWM_50HZ || evt.evt_type==ZXSG_SLOWM_60HZ) {
+                if(watchdog_cnt>=2){
+                    ESP_LOGW(TAG,"Slow mode after initial LOAD, success after %d cnts.",watchdog_cnt);
+                    watchdog_cnt=0; /* deactivate watchdog after succesfully loaded */
+                }
+            } else {
+                ESP_LOGI(TAG,"Unexpected evt %d %d",evt.evt_type,watchdog_cnt);
+            }
+		} else {
+            /* no new event, check if we have a failure in compressed loading */
+            if(watchdog_cnt>=2){
+                if(++watchdog_cnt > COMPRLOAD_TIMEOUT_MS/EVT_TIMEOUT_MS  ){
+                    ESP_LOGW(TAG,"Compressed load watchdog - maybe wrong level!");
+                    set_zx_outlevel_inverted( ! get_zx_outlevel_inverted() );
+                    stzx_set_out_inv_level( get_zx_outlevel_inverted()  );
+                    watchdog_cnt=0;
+                }
+            }
+        }
+        
     }
+
 }
 
 

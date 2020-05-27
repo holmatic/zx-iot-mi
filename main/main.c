@@ -17,6 +17,7 @@
 #include "esp_ota_ops.h"
 #include "nvs_flash.h"
 #include "nvs.h"
+#include "driver/gpio.h"
 
 #include "zx_server.h"
 #include "signal_from_zx.h"
@@ -100,12 +101,33 @@ void nvs_sys_init(){
 
 
 
+#define PIN_NUM_BLINK_LED 2
+#define BLINK_LED_ON 1
+#define BLINK_LED_OFF 0
+
+/* Blink LED, pin number is configurable in NVS, default 2
+*
+*   Show
+*       Light up during init
+*       Flash 0.5 sec once WIFI connected
+*       Flash slowly during slow mode (2 sec 1-2pulses dep on WIFI)
+*       Flash fast during load/save 
+*       Flash every 5 sec when not connected (no changes in input, 2 pulses when wifi)
+*  
+*/
 
 
+static void bled_init()
+{
+	gpio_pad_select_gpio(PIN_NUM_BLINK_LED);
+	gpio_set_direction(PIN_NUM_BLINK_LED, GPIO_MODE_OUTPUT);
+	gpio_set_level(PIN_NUM_BLINK_LED, BLINK_LED_ON);
+}
 
-
-
-
+static void bled_ini_done()
+{
+	gpio_set_level(PIN_NUM_BLINK_LED, BLINK_LED_OFF);
+}
 
 
 
@@ -139,8 +161,8 @@ void app_main()
 
 
 
-
     nvs_sys_init();
+    bled_init();
     zxsrv_init();
     stzx_init();
     sfzx_init();
@@ -152,5 +174,7 @@ void app_main()
 
     /* Start the file server */
     ESP_ERROR_CHECK(start_file_server("/spiffs"));
+
+    bled_ini_done();
 
 }
