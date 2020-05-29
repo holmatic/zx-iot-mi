@@ -30,6 +30,7 @@ void stzx_send_cmd(stzx_mode_t cmd, uint8_t data);
 
 void stzx_set_out_inv_level(bool inv);
 
+bool stzx_is_transfer_active();
 
 #ifdef __cplusplus
 }

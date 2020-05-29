@@ -9,6 +9,9 @@
 
 #include <sys/param.h>
 #include <string.h>
+#include "freertos/FreeRTOS.h"
+#include "freertos/timers.h"
+
 #include "esp_wifi.h"
 #include "esp_event_loop.h"
 #include "esp_log.h"
@@ -101,16 +104,15 @@ void nvs_sys_init(){
 
 
 
-#define PIN_NUM_BLINK_LED 2
+#define PIN_NUM_BLINK_LED 2 // 2 for JOY-IT, 21 for TTGO
 #define BLINK_LED_ON 1
 #define BLINK_LED_OFF 0
 
-/* Blink LED, pin number is configurable in NVS, default 2
+/* Blink LED, TODO pin number is configurable in NVS, default 2
 *
 *   Show
 *       Light up during init
-*       Flash 0.5 sec once WIFI connected
-*       Flash slowly during slow mode (2 sec 1-2pulses dep on WIFI)
+*       Flash slowly during slow mode (2.5 sec 1-2pulses dep on WIFI)
 *       Flash fast during load/save 
 *       Flash every 5 sec when not connected (no changes in input, 2 pulses when wifi)
 *  
@@ -124,9 +126,35 @@ static void bled_init()
 	gpio_set_level(PIN_NUM_BLINK_LED, BLINK_LED_ON);
 }
 
+
+#define BLED_CYCLE_MS 40
+
+static void bled_timer_event( TimerHandle_t pxTimer )
+{
+    bool slowmode_detected=(zxsrv_get_zx_status()==ZXSG_SLOWM_50HZ ||  zxsrv_get_zx_status()==ZXSG_SLOWM_60HZ  ); 
+    bool led_on=false;
+    static uint16_t count=0; /* cycle count */
+    ++count;
+    if (stzx_is_transfer_active()){
+        led_on = ((count&3)==1);
+    } else if (zxsrv_get_zx_status()==ZXSG_FILE_DATA){
+        led_on = ((count&3)>1);
+    } else {
+        if (count==1) led_on = true; 
+        if (count==6) led_on = slowmode_detected; 
+        if (count==10) led_on = wifi_sta_is_connected(); 
+        if (count>2500/BLED_CYCLE_MS && slowmode_detected) count=0; 
+        if (count>5000/BLED_CYCLE_MS) count=0; 
+    }
+	gpio_set_level(PIN_NUM_BLINK_LED, led_on ? BLINK_LED_ON : BLINK_LED_OFF);
+ }
+ 
 static void bled_ini_done()
 {
+    xTimerHandle t;
 	gpio_set_level(PIN_NUM_BLINK_LED, BLINK_LED_OFF);
+    t=xTimerCreate( "LED_Flasher",( BLED_CYCLE_MS / portTICK_PERIOD_MS), pdTRUE,0,bled_timer_event);
+    xTimerStart(t,0);
 }
 
 

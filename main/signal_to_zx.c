@@ -196,6 +196,11 @@ static uint8_t file_busy=0;
 
 #define SEND_HOLDOFF_BYTES 200  // enough so we do not run out of data on first chunk even when compressed
 
+bool stzx_is_transfer_active()
+{
+	return file_busy!=0;
+}
+
 void stzx_send_cmd(stzx_mode_t cmd, uint8_t data)
 {
     i2s_event_t evt;

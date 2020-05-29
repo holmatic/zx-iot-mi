@@ -42,6 +42,8 @@ typedef struct {
 
 void zxsrv_send_msg_to_srv( zxserv_evt_type_t msg, uint16_t addr, uint16_t data);
 
+zxserv_evt_type_t zxsrv_get_zx_status();
+
 #ifdef __cplusplus
 }
 #endif

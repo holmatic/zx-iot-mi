@@ -228,11 +228,17 @@ void zxsrv_init()
     xTaskCreate(zxsrv_task, "zxsrv_task", 1024 * 4, NULL, 8, NULL);
 }
 
+zxserv_evt_type_t current_status=ZXSG_INIT;
+
+zxserv_evt_type_t zxsrv_get_zx_status()
+{
+    return current_status;
+}
 
 void zxsrv_send_msg_to_srv( zxserv_evt_type_t msg, uint16_t addr, uint16_t data)
 {
     zxserv_event_t evt;
-	evt.evt_type=msg;
+	current_status=evt.evt_type=msg;
 	evt.addr=addr;
 	evt.data=data;
 	if( xQueueSendToBack( msg_queue,  &evt, 100 / portTICK_RATE_MS ) != pdPASS )
@@ -241,3 +247,5 @@ void zxsrv_send_msg_to_srv( zxserv_evt_type_t msg, uint16_t addr, uint16_t data)
 		ESP_LOGE(TAG, "Server write queue blocked");
 	}
 }
+
+
