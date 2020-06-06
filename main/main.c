@@ -103,8 +103,10 @@ void nvs_sys_init(){
 }
 
 
-
+/* currently support 2 blink LED, if more need to be supporred we could either make it mask or configurable */
 #define PIN_NUM_BLINK_LED 2 // 2 for JOY-IT, 21 for TTGO
+#define PIN_NUM_2ND_BLINK_LED 21 // 2 for JOY-IT, 21 for TTGO
+
 #define BLINK_LED_ON 1
 #define BLINK_LED_OFF 0
 
@@ -118,12 +120,20 @@ void nvs_sys_init(){
 *  
 */
 
+static void bled_ini_single(uint8_t num)
+{
+    if(num<GPIO_NUM_MAX){
+        gpio_pad_select_gpio(num);
+	    gpio_set_direction(num, GPIO_MODE_OUTPUT);
+	    gpio_set_level(num, BLINK_LED_ON);
+    }
+}
+
 
 static void bled_init()
 {
-	gpio_pad_select_gpio(PIN_NUM_BLINK_LED);
-	gpio_set_direction(PIN_NUM_BLINK_LED, GPIO_MODE_OUTPUT);
-	gpio_set_level(PIN_NUM_BLINK_LED, BLINK_LED_ON);
+    bled_ini_single(PIN_NUM_BLINK_LED);
+    bled_ini_single(PIN_NUM_2ND_BLINK_LED);
 }
 
 
@@ -146,19 +156,17 @@ static void bled_timer_event( TimerHandle_t pxTimer )
         if (count>2500/BLED_CYCLE_MS && slowmode_detected) count=0; 
         if (count>5000/BLED_CYCLE_MS) count=0; 
     }
-	gpio_set_level(PIN_NUM_BLINK_LED, led_on ? BLINK_LED_ON : BLINK_LED_OFF);
+	if(PIN_NUM_BLINK_LED<GPIO_NUM_MAX)      gpio_set_level(PIN_NUM_BLINK_LED,     led_on ? BLINK_LED_ON : BLINK_LED_OFF);
+	if(PIN_NUM_2ND_BLINK_LED<GPIO_NUM_MAX)  gpio_set_level(PIN_NUM_2ND_BLINK_LED, led_on ? BLINK_LED_ON : BLINK_LED_OFF);
  }
  
+
 static void bled_ini_done()
 {
     xTimerHandle t;
-	gpio_set_level(PIN_NUM_BLINK_LED, BLINK_LED_OFF);
     t=xTimerCreate( "LED_Flasher",( BLED_CYCLE_MS / portTICK_PERIOD_MS), pdTRUE,0,bled_timer_event);
     xTimerStart(t,0);
 }
-
-
-
 
 
 /* Declare the function which starts the file server.
