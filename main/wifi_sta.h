@@ -25,4 +25,7 @@ void wifi_sta_allow_for_AP_scan();
 // status message
 const char* wifi_get_status_msg();
 
+// status message
+const char* wifi_get_MAC_addr();
+
 #endif /* _WIFI_STA_H_ */

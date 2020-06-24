@@ -36,7 +36,7 @@ static const char *TAG = "zx_srv_dlg";
 
 static char txt_buf[85]; // linewidth plus []-options
 
-#define FILFB_SIZE 32
+#define FILFB_SIZE 68
 #define FILENAME_SIZE 24
 
 
@@ -285,6 +285,9 @@ static bool zxsrv_system(const char *wifi_name, int offset){
 
     sprintf(txt_buf,"[W] WIFI CONFIG");
     zxfimg_print_video(9,txt_buf);
+
+    sprintf(txt_buf,"MAC %s",wifi_get_MAC_addr());
+    zxfimg_print_video(18,txt_buf);
 
     sprintf(txt_buf,"VERSION %s-%s",esp_ota_get_app_description()->version,esp_ota_get_app_description()->date);
     zxfimg_print_video(20,txt_buf);

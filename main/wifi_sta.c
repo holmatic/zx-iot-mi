@@ -26,6 +26,7 @@ static bool wifi_is_connected=false;
 
 
 static char wifi_stat_msg[33];
+static char wifi_macaddr_msg[24];
 
 
 // return true if successfully connected and IP provided
@@ -38,6 +39,15 @@ bool wifi_sta_is_connected()
 const char* wifi_get_status_msg()
 {
     return wifi_stat_msg;
+}
+
+const char* wifi_get_MAC_addr()
+{
+    uint8_t mac[6];
+    //esp_err_t esp_wifi_get_mac(wifi_interface_t ifx, uint8_t mac[6]);
+    esp_wifi_get_mac(ESP_IF_WIFI_STA, mac);
+    sprintf(wifi_macaddr_msg,"%02X:%02X:%02X:%02X:%02X:%02X",mac[0],mac[1],mac[2],mac[3],mac[4],mac[5]);
+    return wifi_macaddr_msg;
 }
 
 
