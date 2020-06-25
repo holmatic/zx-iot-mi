@@ -8,11 +8,14 @@ ZX-Wespi: ESP32-based Wifi-enabled Fileserver for ZX81 with very simple DIY inte
 0.2.0 Initial pre-release
 
 0.2.1 Improvements:
+
       - Max WLAN password size incremented from 31 to 64 characters
+
       - MAC Addr of module shown in SYS menu
 
+0.2.2 Improvements:
 
-
+      - Free space info in file server
 
 
 

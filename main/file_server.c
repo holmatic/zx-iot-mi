@@ -80,6 +80,7 @@ static esp_err_t http_resp_dir_html(httpd_req_t *req, const char *dirpath)
     char entrypath[FILE_PATH_MAX];
     char entrysize[16];
     const char *entrytype;
+    size_t total = 0, used = 0;
 
     struct dirent *entry;
     struct stat entry_stat;
@@ -160,9 +161,18 @@ static esp_err_t http_resp_dir_html(httpd_req_t *req, const char *dirpath)
     /* Finish the file list table */
     httpd_resp_sendstr_chunk(req, "</tbody></table>");
 
+
+    /* Add free space info -  TODO have more generic vfs method here? */
+    if (esp_spiffs_info(NULL, &total, &used) == ESP_OK) {
+        httpd_resp_sendstr_chunk(req, "<p> Free: ");
+        sprintf(entrysize, "%d of %d", total-used,total  );
+        httpd_resp_sendstr_chunk(req, entrysize);
+        httpd_resp_sendstr_chunk(req, " Bytes</p>");
+    }
+
     /* Add status line */
 
-    httpd_resp_sendstr_chunk(req, "<p>by members of ZX-TEAM 2020. Version ");
+    httpd_resp_sendstr_chunk(req, "<p>ZX-Wespi 2020 by members of ZX-TEAM. Version ");
     httpd_resp_sendstr_chunk(req,esp_ota_get_app_description()->version);
     httpd_resp_sendstr_chunk(req, "-");
     httpd_resp_sendstr_chunk(req,esp_ota_get_app_description()->date);
