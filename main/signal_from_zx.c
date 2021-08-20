@@ -14,166 +14,24 @@
 
 
 static const char* TAG = "sfzx";
-#define V_REF   1100
-
-//i2s number
-#define SFZX_I2S_NUM           (0)
-//i2s sample rate
-// need at least two sample points in one 256/6.5=39.4 us line, so less than 19us, for expmple 16.67us 
-#define SFZX_I2S_SAMPLE_RATE   (60000) 
-#define USEC_TO_SAMPLES(us)   (us*SFZX_I2S_SAMPLE_RATE/1000000) 
-#define MILLISEC_TO_SAMPLES(ms)   (ms*SFZX_I2S_SAMPLE_RATE/1000) 
-inline uint32_t samples_to_usec(uint32_t smpl)   { return (smpl*1000/(SFZX_I2S_SAMPLE_RATE/1000)); }
-
-
-
-//i2s data bits
-// ADC has 12 bit, so need 16
-#define SFZX_I2S_SAMPLE_BITS   (16)
-
-//I2S read buffer length in bytes
-// we want to buffer several millisecs to be able to reschedule freely; on the
-// other side, we do not want too many delays in order to be reactive, so say 10ms
-#define SFZX_I2S_READ_LEN_SAMPLES      (SFZX_I2S_SAMPLE_RATE/100)
-#define SFZX_I2S_READ_LEN_BYTES      (SFZX_I2S_READ_LEN_SAMPLES * SFZX_I2S_SAMPLE_BITS/8)
-
-
-//I2S data format
-// single channel is enough, the lest one seems to be connected to ADC
-#define SFZX_I2S_FORMAT        (I2S_CHANNEL_FMT_ONLY_LEFT) 
-
-//I2S channel number
-#define SFZX_I2S_CHANNEL_NUM   ((SFZX_I2S_FORMAT < I2S_CHANNEL_FMT_ONLY_RIGHT) ? (2) : (1))
-//I2S built-in ADC unit
-#define I2S_ADC_UNIT              ADC_UNIT_1
-//I2S built-in ADC channel
-#define I2S_ADC_CHANNEL           ADC1_CHANNEL_0
-
-
-//static  esp_adc_cal_characteristics_t sampleadc_characteristics;
-static void sfzx_task(void*arg);
-
-
-static QueueHandle_t i2squeue=NULL;
-static uint8_t* i2s_read_buff=NULL;
-
-typedef struct statistic_info
-{
-    uint32_t packets_received;
-    uint16_t max_v;
-    uint16_t min_v;
-    uint16_t thresh_v;
-    uint16_t last_v;
-} statistic_info_type;
-
-static statistic_info_type stat;    // some signal statistics
 
 
 
 
-
-typedef struct level_status
-{
-	uint8_t current;
-	uint32_t duration;
-	uint32_t dur_since_last_sync;
-	uint32_t dur_since_last_0_lvl;
-} level_status_type;
-
-static level_status_type level;    // some signal statistics
-
-
-
-/**
- * @brief I2S ADC/DAC mode init.
- */
-void sfzx_init()
-{
-	int i2s_num = SFZX_I2S_NUM;
-	i2s_config_t i2s_config = {
-        .mode = I2S_MODE_MASTER | I2S_MODE_RX | I2S_MODE_ADC_BUILT_IN,
-        .sample_rate =  SFZX_I2S_SAMPLE_RATE,
-        .bits_per_sample = SFZX_I2S_SAMPLE_BITS,
-	    .communication_format =  I2S_COMM_FORMAT_I2S_MSB,
-	    .channel_format = SFZX_I2S_FORMAT,
-	    .intr_alloc_flags = 0,
-	    .dma_buf_count = 4,
-	    .dma_buf_len = SFZX_I2S_READ_LEN_SAMPLES,
-	    .use_apll = 0,//1, True cause problems at high rates (?)
-	};
-	 //install and start i2s driver
-    //xQueueCreate(5, sizeof(i2s_event_t));
-	adc1_config_channel_atten(I2S_ADC_CHANNEL,ADC_ATTEN_DB_11);
-	adc1_config_width(ADC_WIDTH_BIT_12);
-	i2s_driver_install(i2s_num, &i2s_config, 5, &i2squeue );
-	//init ADC pad
-	i2s_set_adc_mode(I2S_ADC_UNIT, I2S_ADC_CHANNEL);
-
-	//adc_power_always_on();
-	i2s_adc_enable(SFZX_I2S_NUM);
-
-	//adc_i2s_mode_init(I2S_ADC_UNIT, I2S_ADC_CHANNEL);
-    // get scaling for conversion
-    //esp_adc_cal_characterize(I2S_ADC_UNIT, ADC_ATTEN_DB_11, ADC_WIDTH_BIT_12, V_REF, &sampleadc_characteristics);
-    i2s_read_buff=(uint8_t*) calloc(SFZX_I2S_READ_LEN_BYTES, sizeof(uint8_t));
-    memset(&stat,0,sizeof(statistic_info_type));
-    xTaskCreate(sfzx_task, "sfzx_task", 1024 * 3, NULL, 8, NULL);
-
-
+#define USEC_TO_SAMPLES(us)   (us*20/32) 
+#define MILLISEC_TO_SAMPLES(us)   (us*20000/32) 
+static inline uint32_t samples_to_usec(uint32_t samples){
+	return samples*32/20;
 }
 
 
-static inline uint16_t get_sample(void* samplebuf, uint32_t ix)
-{
-#if (ESP_IDF_VERSION_MAJOR>=4)
-    return ((uint16_t*)samplebuf)[ix^1];
-#else
-    return 4095-((uint16_t*)samplebuf)[ix^1]; // early versions returned inverted data of ADC via I2S
-#endif
-}
 
+static uint32_t data_num_0=0;
+static uint32_t data_num_1=0;
+static bool data_vid_active=0;
 
-static inline uint16_t calc_thresh_level(uint16_t minlevel, uint16_t maxlevel)
-{
-    return (minlevel+maxlevel+maxlevel)/3; // newrer to uppel level to get sync and black all to low side
-}
+static uint32_t data_num_short_0=0;
 
-
-static void create_initial_stat(void* samplebuf)
-{
-    uint32_t ix;
-    uint16_t v=stat.max_v=stat.min_v=get_sample(samplebuf,0);
-
-    for(ix=0;ix<SFZX_I2S_READ_LEN_SAMPLES;ix++)
-    {
-        v=get_sample(samplebuf,ix);
-        if (v>stat.max_v) stat.max_v=v; 
-        if (v<stat.min_v) stat.min_v=v; 
-    }
-    stat.thresh_v=(stat.max_v+stat.min_v)/2;
-    stat.last_v=stat.thresh_v; // somewhere
-}
-
-static void do_some_stat(void* samplebuf)
-{
-    uint32_t ix;
-    uint16_t v;
-
-    // allow some recovery from spikes, but not too fast
-    if ((stat.packets_received&0x0003)==2){ 
-        stat.max_v--;
-    }
-    stat.min_v++; // adapt lower limit faster as there will always be hsyncs around
-
-    // pick a subset of points to do some statistics quickly
-    for(ix=SFZX_I2S_READ_LEN_SAMPLES/8; ix<SFZX_I2S_READ_LEN_SAMPLES/4;ix++)
-    {
-        v=get_sample(samplebuf,ix);
-        if (v>stat.max_v) stat.max_v=v; 
-        if (v<stat.min_v) stat.min_v=v; 
-    }
-    stat.thresh_v=(stat.max_v+stat.min_v)/2;
-}
 
 static zxserv_evt_type_t phase=ZXSG_INIT;
 
@@ -250,70 +108,48 @@ static void zxfile_check_bit_end()
 }
 
 
-static void analyze_1_to_0()
+static void analyze_1_to_0(uint32_t duration)
 {
 	// end of high phase
 	if (zxfile.state>=ZXFS_HDR_RECEIVED){
-		if(level.duration>=USEC_TO_SAMPLES(90) && level.duration<=USEC_TO_SAMPLES(250)){ // should be 150u
+		if(duration>=USEC_TO_SAMPLES(90) && duration<=USEC_TO_SAMPLES(250)){ // should be 150u
 			++zxfile.pulscount;
 		}
-	}
-	else
-	{
-		 if ( level.dur_since_last_sync>MILLISEC_TO_SAMPLES(100) )
-		 {
-			 // No file but also no display nor silence
-		//	 if(level.duration>USEC_TO_SAMPLES(100)&&level.duration<USEC_TO_SAMPLES(1000)) set_det_phase(ZXSG_NOISE);
-		 }
 	}
 }
 
 
-static void analyze_0_to_1()
+static void analyze_0_to_1(uint32_t duration)
 {
-	if(level.duration>2) level.dur_since_last_0_lvl=0;
 
-	if(level.duration>USEC_TO_SAMPLES(300) && level.duration<USEC_TO_SAMPLES(600))
+	if(duration>USEC_TO_SAMPLES(300) && duration<USEC_TO_SAMPLES(600))
 	{
-		// could be sync
-		if(level.dur_since_last_sync>MILLISEC_TO_SAMPLES(15) && level.dur_since_last_sync<MILLISEC_TO_SAMPLES(22))
-		{
-			set_det_phase(ZXSG_SLOWM_50HZ);
-		}
-		else if(level.dur_since_last_sync<MILLISEC_TO_SAMPLES(10)){
-			set_det_phase(ZXSG_NOISE);
-		}
-
-		if(stat.packets_received%5000==10){
-			ESP_LOGI(TAG,"Frame detected %d usec (%d) ", samples_to_usec(level.dur_since_last_sync),level.duration  );
-			ESP_LOGI(TAG,"Min Max Thresh %d %d %d \n", stat.min_v, stat.max_v, stat.thresh_v  );
-
-		}
-		level.dur_since_last_sync=0;
+		// could be sync, but this will be handled by the video logic, so only acti if we are not already in display mode
+		if(phase!=ZXSG_SLOWM_50HZ && phase!=ZXSG_SLOWM_60HZ) set_det_phase(ZXSG_NOISE);
 	}
 
 	if (zxfile.state>=ZXFS_HDR_RECEIVED){
-		if(level.duration<USEC_TO_SAMPLES(250)){
+		if(duration<USEC_TO_SAMPLES(250)){
 				// okay, gap should be 150u for pules
-		} else if (level.duration>USEC_TO_SAMPLES(1200) && level.duration<USEC_TO_SAMPLES(1800)){ // 1.3ms+0.15
+		} else if (duration>USEC_TO_SAMPLES(1200) && duration<USEC_TO_SAMPLES(1800)){ // 1.3ms+0.15
 			zxfile_check_bit_end();
 		}
 		else
 		{
-			ESP_LOGI(TAG,"File gap retrieved of %d usec, cancel with %d bytes\n",samples_to_usec(level.duration),zxfile.bytecount);
+			ESP_LOGI(TAG,"File gap retrieved of %d usec, cancel with %d bytes\n",samples_to_usec(duration),zxfile.bytecount);
 			zxfile.state=ZXFS_INIT;
 		}
-	} else {
-		 if ( level.dur_since_last_sync>MILLISEC_TO_SAMPLES(100) )
+	} else { /* no header yet */
+		 if ( !data_vid_active )
 		 {
 			 // No file but also no display nor silence
-			 if(level.duration>USEC_TO_SAMPLES(300)&&level.duration<USEC_TO_SAMPLES(2000)) set_det_phase(ZXSG_NOISE);
+			 if(duration>USEC_TO_SAMPLES(300) && duration<USEC_TO_SAMPLES(2000)) set_det_phase(ZXSG_NOISE);
 		 }
 
 	}
 
 
-	if(zxfile.state<ZXFS_HDR_RECEIVED && level.duration>MILLISEC_TO_SAMPLES(100))
+	if(zxfile.state<ZXFS_HDR_RECEIVED && duration>MILLISEC_TO_SAMPLES(60))
 	{
 		// end of long break, could be header of file
 		memset(&zxfile,0,sizeof(zxfile_rec_status_t));
@@ -323,118 +159,71 @@ static void analyze_0_to_1()
 
 
 
-
-static void analyze_static_level()
-{
-	if (level.current==0) set_det_phase(ZXSG_SILENCE);
-
-	if (level.current==1) set_det_phase(ZXSG_HIGH);
-}
-
-
-
-static void analyze_for_noise()
-{
-	if(level.dur_since_last_0_lvl>MILLISEC_TO_SAMPLES(20)) {
-		if(level.current==1 || level.duration<4)
-			set_det_phase(ZXSG_HIGH);
+/* report if we have a regular video signal or are in FAST/LOAD/SAVE/ect */
+void sfzx_report_video_signal_status(bool vid_is_active){
+	if(data_vid_active!=vid_is_active){
+		data_num_0=1;
+		data_num_1=1;
+		zxfile.state=ZXFS_INIT;
+		ESP_LOGI(TAG,"Video signal status: %s\n", vid_is_active?"active":"inactive" );
+		if(vid_is_active) set_det_phase(ZXSG_SLOWM_50HZ);
 	}
-}
+	data_vid_active=vid_is_active;
+} 
 
-//static char debugbuf[250];
 
-#define INITIAL_IGNORED_PACKETS 20
-
-static void analyze_data(uint8_t* buf, size_t size)
+/* every incoming 32-bit sample as long as vid_is_active=false */
+void sfzx_checksample(uint32_t data)
 {
-    uint32_t ix;
-    uint16_t v;
-
-	++stat.packets_received;
-
-	if(stat.packets_received<INITIAL_IGNORED_PACKETS)
-		return;
-	else if(stat.packets_received==INITIAL_IGNORED_PACKETS)
-		create_initial_stat(buf);
-	else
-		do_some_stat(buf);
-
-	if(stat.packets_received%8000==32 ){
-		ESP_LOGV(TAG,"stat.packets_received %d \n",stat.packets_received);
-		ESP_LOGI(TAG,"Min Max Thresh %d %d %d \n", stat.min_v, stat.max_v, stat.thresh_v  );
-		ESP_LOGI(TAG,"Current %d %d %d,  \n", level.current, level.duration,level.dur_since_last_0_lvl  );
-//		vTaskList( debugbuf ); // TODO - also disable this in menuconfig if we want to save rsources and remove this
-//		ESP_LOGI(TAG,"\n%s\n", debugbuf);
-	}
-	for(ix=0;ix<SFZX_I2S_READ_LEN_SAMPLES;ix++) {
-		v=get_sample(buf,ix);
-		++level.duration; // might be overritten to zero if we the level changes
-		++level.dur_since_last_sync;
-		++level.dur_since_last_0_lvl;
-		if (level.current==1){ // was high level
-			// ignore single short spikes, could by H-syncs
-			if( v < stat.thresh_v &&  stat.last_v < stat.thresh_v)
-			{
-				if(level.duration>2)
-					analyze_1_to_0();
-				level.current=0;
-				level.duration=0;
+	if (data==0) {
+		data_num_0++;
+		if( data_num_1 ){
+			if (data_num_0 > USEC_TO_SAMPLES(14) ){
+				// not just hsync, have 1-to-0
+				analyze_1_to_0(data_num_1);
+				data_num_1=0;
+				data_num_short_0=0;
 			}
-
-			if (level.dur_since_last_0_lvl%MILLISEC_TO_SAMPLES(500)==MILLISEC_TO_SAMPLES(50)){
-				analyze_for_noise();
-			}
-
-		}
-		else // was low level
-		{
-			if( v > stat.thresh_v &&  (zxfile.state==ZXFS_INIT || stat.last_v > stat.thresh_v)  ) // we do not expect spikes here, de-glich when listening to file
-			{
-				// end of low phase
-				if(level.duration>2) analyze_0_to_1();
-				level.current=1;
-				level.duration=0;
+			else{
+				data_num_short_0++;
+				data_num_1++; // count for continuation through hsync
 			}
 		}
-
-		if (level.duration%MILLISEC_TO_SAMPLES(500)==MILLISEC_TO_SAMPLES(100)){
-			analyze_static_level();
+	} else if (data==0xffffffff){
+		data_num_1++;
+		if(data_num_0> USEC_TO_SAMPLES(14)){
+			// have 0-to-1
+			analyze_0_to_1(data_num_0);
+			data_num_short_0=0;
 		}
-
-
-
-
-		stat.last_v=v;
-	}
-
+		data_num_0=0;
+	} 
+//	else
+//	{
+//		//  ignore all mixed-bit words in terms of transitions, but continue measureing duration 
+//		if(data_num_1) data_num_1++; // count for continuation through hsync
+//		if(data_num_0) data_num_0++; // count for continuation through hsync
+//	}
 }
 
-
-
-static void sfzx_task(void*arg)
-{
-    i2s_event_t evt;
-	size_t bytes_read;
-	uint8_t ignore_first_packets=20;
-    ESP_LOGI(TAG,"sfzx_task START \n");
-	//vTaskDelay(100 / portTICK_PERIOD_MS); // allow some startup and settling time (might help, not proven)
-	//i2s_adc_enable(SFZX_I2S_NUM);
-    while(true){
-		if(pdTRUE ==  xQueueReceive( i2squeue, &evt, 10 / portTICK_RATE_MS ) ) {
-			if(evt.type==I2S_EVENT_RX_DONE){
-                bytes_read=0;
-                i2s_read(SFZX_I2S_NUM, (void*) i2s_read_buff, SFZX_I2S_READ_LEN_BYTES, &bytes_read, 0); // should always succeed with fll length
-                if (bytes_read!=SFZX_I2S_READ_LEN_BYTES){
-                    ESP_LOGW(TAG, "len mismatch, %d %d",bytes_read,SFZX_I2S_READ_LEN_BYTES);
-                }
-				if (ignore_first_packets)
-					ignore_first_packets--;
-				else
-                	analyze_data(i2s_read_buff,SFZX_I2S_READ_LEN_BYTES);
-			}
-			else ESP_LOGW(TAG,"Unexpected evt %d",evt.type);
+/* called periodically at roughly millisec scale */
+void sfzx_periodic_check(){
+	if(data_num_1 > MILLISEC_TO_SAMPLES(80)){
+		if(data_num_short_0 > data_num_1/16)	/* we see the H sync pulses but no V sync */	
+			set_det_phase(ZXSG_HIGH); /* more than two frames high !*/
+		else {
+			/* silence, normally constant-low but due to hi pass filter is seen for us as constant high with no hsync */
+			set_det_phase(ZXSG_SILENCE); 
 		}
-    }
-}
+	}
+	else if (data_num_0 > MILLISEC_TO_SAMPLES(100)) {
+			/* silence, normally  constant-low would not be visible as low - 
+			due to high pass filter, but if for any reason we see it nevertheles, we can also react accordingly */
+			set_det_phase(ZXSG_SILENCE); 
+		}
+}          
 
+
+void sfzx_init()
+{}
 

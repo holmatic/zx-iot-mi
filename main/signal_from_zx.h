@@ -8,14 +8,15 @@
 #include "esp_attr.h"
 #include "freertos/queue.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 // call once at startup
 void sfzx_init();
 
+/* incoming, use all functions single-threaded please */
+void sfzx_report_video_signal_status(bool vid_is_active); /* report if we have a regular video signal or are in FAST/LOAD/SAVE/ect */
+void sfzx_checksample(uint32_t data);   /* every incoming 32-bit sample as long as vid_is_active=false */
+void sfzx_periodic_check();             /* called periodically at roughly millisec scale */
 
+/* outgoing events */
 typedef struct {
     uint8_t  etype;   /*!< sfzx_evt_type_t */
     uint8_t  data;    /*!< for SFZX_EVTTYPE_FILE_DATA */
@@ -23,9 +24,5 @@ typedef struct {
 
 
 
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif /* _SIGNAL_FROM_ZX_H_ */

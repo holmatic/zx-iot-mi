@@ -26,6 +26,10 @@
 #include "signal_from_zx.h"
 #include "signal_to_zx.h"
 #include "wifi_sta.h"
+#include "host_spi_if.h"
+#include "iis_videosig.h"
+#include "led_matrix.h"
+#include "lcd_display.h"
 
 /* This example demonstrates how to create file server
  * using esp_http_server. This file has only startup code.
@@ -105,7 +109,7 @@ void nvs_sys_init(){
 
 /* currently support 2 blink LED, if more need to be supporred we could either make it mask or configurable */
 #define PIN_NUM_BLINK_LED 2 // 2 for JOY-IT, 21 for TTGO
-#define PIN_NUM_2ND_BLINK_LED 21 // 2 for JOY-IT, 21 for TTGO
+#define PIN_NUM_2ND_BLINK_LED GPIO_NUM_MAX // 2 for JOY-IT, 21 for TTGO
 
 #define BLINK_LED_ON 1
 #define BLINK_LED_OFF 0
@@ -133,7 +137,7 @@ static void bled_ini_single(uint8_t num)
 static void bled_init()
 {
     bled_ini_single(PIN_NUM_BLINK_LED);
-    bled_ini_single(PIN_NUM_2ND_BLINK_LED);
+    if(PIN_NUM_2ND_BLINK_LED<GPIO_NUM_MAX) bled_ini_single(PIN_NUM_2ND_BLINK_LED);
 }
 
 
@@ -181,7 +185,7 @@ void app_main()
     //msgqueue=xQueueCreate(10,sizeof(sfzx_evt_type_t));
 
 
-    ESP_LOGI(TAG, "Starting OTA check ...");
+    ESP_LOGI(TAG, "Starting XAM host app ...");
 
 
     const esp_partition_t *configured = esp_ota_get_boot_partition();
@@ -199,10 +203,14 @@ void app_main()
 
     nvs_sys_init();
     bled_init();
-    zxsrv_init();
-    stzx_init();
-    sfzx_init();
-
+    //zxsrv_init();
+    //stzx_init();
+    //sfzx_init();
+    host_spi_init();
+    //vid_init();
+    //lcd_disp_init();
+    
+    //ledmx_init();
 	wifi_sta_init(); /* needs nvs_sys_init */
 
     /* Initialize file storage */

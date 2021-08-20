@@ -26,6 +26,8 @@ Works asynchroously, thus communication is done via queues
 #include "nvs.h"
 #include "zx_file_img.h"
 #include "signal_to_zx.h"
+#include "iis_videosig.h"
+#include "lcd_display.h"
 #include "zx_server.h"
 #include "wifi_sta.h"
 #include "zx_serv_dialog.h"
@@ -353,6 +355,78 @@ static bool zxsrv_respond_wifiscan(const char *dirpath, int offset){
 }
 
 
+static bool zxsrv_videooptions(const char *name, int command){
+
+    if(command){
+        switch(command){
+            case 'C':
+                    vid_cal_pixel_start();
+                    break;
+            case 'I':   /* all fall threough */
+            case 'N':
+            case 'W':
+            case 'G':
+            case 'A':
+                lcd_set_colour_cmd(command,0);
+                break;
+            default:
+                break;
+        }
+
+    }
+
+    zxfimg_create(ZXFI_MENU_KEY);
+
+    zxfimg_cpzx_video (0, (const uint8_t *) "\x1c\x34\x04\x05\x05\x05\x04\x00\x00\x86\x00\x85\x02\x07\x02\x07\x04\x00\x06\x03\x87\x89\x89\x89\x89\x04\x3b\x2e\x29\x2a\x34", 31);
+    zxfimg_cpzx_video (1, (const uint8_t *) "\x03\x89\x05\x05\x05\x05\x05\x01\x00\x00\x05\x06\x00\x05\x00\x05\x85\x85\x03\x01\x85\x08\x08\x08\x08\x05\x00\x00\x28\x34\x33", 31);
+    zxfimg_cpzx_video (2, (const uint8_t *) "\x00\x00\x00\x01\x01\x01\x00\x00\x00\x00\x02\x00\x02\x03\x02\x03\x01\x00\x03\x01\x00\x03\x03\x03\x03\x00\x00\x00\x2b\x2e\x2c", 31);
+    //zxfimg_cpzx_video (0, (const uint8_t *) "\x1c\x34\x04\x05\x05\x05\x04\x00", 8);
+    //zxfimg_cpzx_video (1, (const uint8_t *) "\x03\x89\x05\x05\x05\x05\x05\x01\x00\x00\x00\x06\x00\x06", 14);
+    //zxfimg_cpzx_video (2, (const uint8_t *) "\x00\x00\x00\x01\x01\x01\x00\x00", 8);
+
+    sprintf(txt_buf,"###[ ZX-WESPI VIDEO SETTINGS ]###");
+    zxfimg_print_video(4,txt_buf);
+
+    sprintf(txt_buf," [C] CALIBRATE PIXEL PHASE");
+    zxfimg_print_video(7,txt_buf);
+
+    sprintf(txt_buf," [I]NVERSE OR [N]ORMAL");
+    zxfimg_print_video(10,txt_buf);
+
+    sprintf(txt_buf," [W]HITE, [G]REEN, OR [A]MBER");
+    zxfimg_print_video(12,txt_buf);
+
+    /* the last four lines need to be excactly this way as the patterns are used by the calibration */
+    sprintf(txt_buf,"[ ] [ ] ");
+    zxfimg_print_video(20,txt_buf);
+    zxfimg_print_video(21,txt_buf);
+    sprintf(txt_buf,"####[####]####[####]####[####]####[####]");
+    zxfimg_print_video(22,txt_buf);
+    zxfimg_print_video(23,txt_buf);
+
+    //if(command=='C'){
+    //    sprintf(txt_buf,"##[ CALIBRATION-PLS WAIT 1 MIN ]##");
+    //    zxfimg_print_video(18,txt_buf);
+   // }
+
+
+    clear_mrespond_entries();
+    create_mrespond_entry(56, zxsrv_system, "INP-QU", 0 ); // "S"
+    
+    create_mrespond_entry(40, zxsrv_videooptions, "VID-CAL", 'C' ); // "C"
+    create_mrespond_entry(46, zxsrv_videooptions, "VID-INV", 'I' ); // "I"
+    create_mrespond_entry(51, zxsrv_videooptions, "VID-NRM", 'N' ); // "N"
+    create_mrespond_entry(60, zxsrv_videooptions, "VID-WH", 'W' ); // "W"
+    create_mrespond_entry(44, zxsrv_videooptions, "VID-GR", 'G' ); // "G"
+    create_mrespond_entry(38, zxsrv_videooptions, "VID-AM", 'A' ); // "A"
+    
+    /* append default entry */
+    create_mrespond_entry(0, zxsrv_respond_filemenu, "/spiffs/", 0 );
+    return true; // to send_zxf_image_compr();zxfimg_delete();
+}
+
+
+
 #define MAX_FILEENTRY_LINES 15
 
 static bool zxsrv_respond_filemenu(const char *dirpath, int offset){
@@ -440,12 +514,13 @@ static bool zxsrv_respond_filemenu(const char *dirpath, int offset){
     zxfimg_print_video(23,wifi_get_status_msg());
 
     //sprintf(txt_buf,"VER:0.04B %s",IDF_VER);
-    snprintf(txt_buf,32,"%s %s    [S]YS  [H]ELP",entry!=NULL?"[N]EXT":"    ",offset?"[P]REV":"    ");
+    snprintf(txt_buf,36,"%6s %6s  [S]YS [V]IDEO [H]ELP",entry!=NULL?"[N]EXT":"    ",offset?"[P]REV":"    ");
     zxfimg_print_video(21,txt_buf);
 
   // create_mrespond_entry(55, zxsrv_respond_inpstr, "INP-QU", 0 ); // "R"
     create_mrespond_entry(56, zxsrv_system, "INP-QU", 0 ); // "S"
     create_mrespond_entry(45, zxsrv_help, "HELP", 0 ); // "H"
+    create_mrespond_entry(59, zxsrv_videooptions, "VIDEO", 0 ); // "V"
     create_mrespond_entry(60, zxsrv_respond_wifiscan, "WIFI", 0 ); // "W"
     /* append default entry */
     create_mrespond_entry(0, zxsrv_respond_filemenu, "/spiffs/", 0 );

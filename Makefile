@@ -3,7 +3,7 @@
 # project subdirectory.
 #
 
-PROJECT_NAME := zx_iot
+PROJECT_NAME := zx_xam
 
 include $(IDF_PATH)/make/project.mk
 
